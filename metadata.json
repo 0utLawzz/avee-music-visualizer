@@ -1,0 +1,6 @@
+{
+  "name": "PulseCraft Studio - Audio Visualizer & Video Creator",
+  "description": "Create dashing beat-reactive music visualizer videos with Avee/Trap Nation templates, automatic beat detection, custom overlays, and high-quality social media video export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
