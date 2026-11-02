@@ -763,6 +763,128 @@ export const OverlayControls: React.FC<OverlayControlsProps> = ({
             <span className="text-xs font-bold text-white">Reels Safe Zone</span>
           </label>
         </div>
+
+        {/* Floating Particles & Shape Presets */}
+        <div className="pt-3 border-t border-slate-800/80 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+              Floating Particles & Avee Shapes
+            </span>
+            <label className="flex items-center gap-2 text-xs font-semibold text-slate-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={config.overlays.particles}
+                onChange={(e) =>
+                  onUpdateConfig((prev) => ({
+                    ...prev,
+                    overlays: { ...prev.overlays, particles: e.target.checked }
+                  }))
+                }
+                className="rounded text-rose-500 focus:ring-0"
+              />
+              Enable Particles
+            </label>
+          </div>
+
+          {config.overlays.particles && (
+            <div className="space-y-3 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
+              {/* Particle Shape Selector */}
+              <div>
+                <span className="text-[11px] font-semibold text-slate-400 block mb-1.5">
+                  Particle Geometry / Avee Shape
+                </span>
+                <div className="grid grid-cols-4 gap-2">
+                  {(
+                    [
+                      { id: 'circle', label: 'Classic Spark', desc: 'Dots' },
+                      { id: 'heart', label: 'Avee Hearts', desc: 'Falling hearts' },
+                      { id: 'cube', label: '3D Cubes', desc: 'Warp cubes' },
+                      { id: 'star', label: 'Stars', desc: '4-point stars' }
+                    ] as const
+                  ).map((shape) => {
+                    const isSelected = (config.overlays.particleShape || 'circle') === shape.id;
+                    return (
+                      <button
+                        key={shape.id}
+                        type="button"
+                        onClick={() =>
+                          onUpdateConfig((prev) => ({
+                            ...prev,
+                            overlays: { ...prev.overlays, particleShape: shape.id }
+                          }))
+                        }
+                        className={`p-2 rounded-lg border text-center transition-all ${
+                          isSelected
+                            ? 'bg-rose-500/20 border-rose-500 text-white font-bold'
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span className="text-xs block">{shape.label}</span>
+                        <span className="text-[10px] text-slate-500 block">{shape.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Count and Color */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Particle Count</span>
+                    <span className="font-mono text-white font-bold">{config.overlays.particleCount}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={20}
+                    max={250}
+                    step={10}
+                    value={config.overlays.particleCount}
+                    onChange={(e) =>
+                      onUpdateConfig((prev) => ({
+                        ...prev,
+                        overlays: { ...prev.overlays, particleCount: parseInt(e.target.value) }
+                      }))
+                    }
+                    className="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={config.overlays.particleBurstOnKick}
+                      onChange={(e) =>
+                        onUpdateConfig((prev) => ({
+                          ...prev,
+                          overlays: { ...prev.overlays, particleBurstOnKick: e.target.checked }
+                        }))
+                      }
+                      className="rounded text-rose-500 focus:ring-0"
+                    />
+                    Kick Drum Burst Shockwave
+                  </label>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={config.overlays.particleColor}
+                      onChange={(e) =>
+                        onUpdateConfig((prev) => ({
+                          ...prev,
+                          overlays: { ...prev.overlays, particleColor: e.target.value }
+                        }))
+                      }
+                      className="w-7 h-7 rounded-lg bg-transparent cursor-pointer border-0"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

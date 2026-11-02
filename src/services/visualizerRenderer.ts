@@ -28,8 +28,26 @@ export class VisualizerRenderer {
   private transitionDuration = 0.6;
   private transitionEffect: TransitionEffect = 'blur_dissolve';
 
+  // 3D Portal Warp Cubes (Tunnel Portal Template)
+  private warpCubes: { x: number; y: number; z: number; size: number; alpha: number; rot: number }[] = [];
+
   constructor() {
     this.initNoiseCanvas();
+    this.initWarpCubes(80);
+  }
+
+  private initWarpCubes(count = 80): void {
+    this.warpCubes = [];
+    for (let i = 0; i < count; i++) {
+      this.warpCubes.push({
+        x: (Math.random() - 0.5) * 1200,
+        y: (Math.random() - 0.5) * 800,
+        z: Math.random() * 900 + 40,
+        size: Math.random() * 16 + 10,
+        alpha: Math.random() * 0.7 + 0.3,
+        rot: Math.random() * Math.PI * 2
+      });
+    }
   }
 
   private initNoiseCanvas(): void {
@@ -153,6 +171,8 @@ export class VisualizerRenderer {
     const vizCenterX = (config.layout.visualizerPos.x / 100) * width;
     const vizCenterY = (config.layout.visualizerPos.y / 100) * height;
 
+    const hasBuiltInCenter = ['cyber_horizon', 'neon_box_frame', 'tunnel_portal', 'twin_woofers'].includes(config.template);
+
     this.renderVisualizer(
       ctx,
       width,
@@ -162,11 +182,12 @@ export class VisualizerRenderer {
       config,
       freqData,
       timeData,
-      beatState
+      beatState,
+      playbackTime
     );
 
-    // 4. Render Center Badge / Logo
-    if (config.centerBadge.enabled) {
+    // 4. Render Center Badge / Logo (for templates with floating center badges)
+    if (config.centerBadge.enabled && !hasBuiltInCenter) {
       this.renderCenterBadge(
         ctx,
         vizCenterX,
@@ -177,8 +198,10 @@ export class VisualizerRenderer {
       );
     }
 
-    // 5. Render Track Info & Artist Badge
-    this.renderTrackInfo(ctx, width, height, config, playbackTime);
+    // 5. Render Track Info & Artist Badge (cyber_horizon and neon_box_frame have built-in typography)
+    if (config.template !== 'cyber_horizon') {
+      this.renderTrackInfo(ctx, width, height, config, playbackTime);
+    }
 
     // 6. Render Custom Layered Graphic & Text Overlays
     if (config.customOverlays && config.customOverlays.length > 0) {
@@ -528,15 +551,68 @@ export class VisualizerRenderer {
 
       // Particle size expands on bass pulse
       const currentSize = p.baseSize * (1 + beatState.pulseDecay * 0.8);
+      const shape = config.overlays.particleShape || 'circle';
 
       ctx.fillStyle = config.overlays.particleColor || '#ffffff';
       ctx.globalAlpha = p.alpha * (0.6 + beatState.pulseDecay * 0.4);
       ctx.shadowBlur = 8 * beatState.pulseDecay;
       ctx.shadowColor = config.overlays.particleColor || '#ffffff';
 
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, currentSize, 0, Math.PI * 2);
-      ctx.fill();
+      if (shape === 'heart') {
+        const hSize = currentSize * 2.2;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.beginPath();
+        ctx.moveTo(0, hSize * 0.3);
+        ctx.bezierCurveTo(0, -hSize * 0.2, -hSize * 0.6, -hSize * 0.2, -hSize * 0.6, hSize * 0.3);
+        ctx.bezierCurveTo(-hSize * 0.6, hSize * 0.7, 0, hSize * 1.1, 0, hSize * 1.3);
+        ctx.bezierCurveTo(0, hSize * 1.1, hSize * 0.6, hSize * 0.7, hSize * 0.6, hSize * 0.3);
+        ctx.bezierCurveTo(hSize * 0.6, -hSize * 0.2, 0, -hSize * 0.2, 0, hSize * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      } else if (shape === 'cube') {
+        const cSize = currentSize * 2.4;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.fillRect(-cSize / 2, -cSize / 2, cSize, cSize);
+        ctx.beginPath();
+        ctx.moveTo(-cSize / 2, -cSize / 2);
+        ctx.lineTo(-cSize / 4, -cSize);
+        ctx.lineTo(cSize * 0.75, -cSize);
+        ctx.lineTo(cSize / 2, -cSize / 2);
+        ctx.closePath();
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = p.alpha * 0.7;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cSize / 2, -cSize / 2);
+        ctx.lineTo(cSize * 0.75, -cSize);
+        ctx.lineTo(cSize * 0.75, 0);
+        ctx.lineTo(cSize / 2, cSize / 2);
+        ctx.closePath();
+        ctx.fillStyle = config.bars.accentColor || '#38bdf8';
+        ctx.globalAlpha = p.alpha * 0.5;
+        ctx.fill();
+        ctx.restore();
+      } else if (shape === 'star') {
+        const sSize = currentSize * 2.0;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.beginPath();
+        for (let s = 0; s < 4; s++) {
+          const angle = (s * Math.PI) / 2;
+          ctx.lineTo(Math.cos(angle) * sSize, Math.sin(angle) * sSize);
+          ctx.lineTo(Math.cos(angle + Math.PI / 4) * (sSize * 0.3), Math.sin(angle + Math.PI / 4) * (sSize * 0.3));
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, currentSize, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     ctx.restore();
   }
@@ -550,9 +626,35 @@ export class VisualizerRenderer {
     config: VisualizerConfig,
     freqData: Uint8Array,
     timeData: Uint8Array,
-    beatState: BeatDetectionState
+    beatState: BeatDetectionState,
+    playbackTime = 0
   ): void {
     const template = config.template;
+
+    if (template === 'cyber_horizon') {
+      this.renderCyberHorizon(ctx, width, height, config, freqData, timeData, beatState);
+      return;
+    }
+
+    if (template === 'phonk_crown') {
+      this.renderPhonkCrown(ctx, width, height, cx, cy, config, freqData, timeData, beatState);
+      return;
+    }
+
+    if (template === 'neon_box_frame') {
+      this.renderNeonBoxFrame(ctx, width, height, config, freqData, beatState, playbackTime);
+      return;
+    }
+
+    if (template === 'tunnel_portal') {
+      this.renderTunnelPortal(ctx, width, height, config, freqData, timeData, beatState, playbackTime);
+      return;
+    }
+
+    if (template === 'twin_woofers') {
+      this.renderTwinWoofers(ctx, width, height, config, freqData, timeData, beatState);
+      return;
+    }
 
     if (template === 'monstercat_bars') {
       this.renderMonstercatSpectrum(ctx, width, height, config, freqData, beatState);
@@ -1166,6 +1268,856 @@ export class VisualizerRenderer {
     ctx.fillStyle = 'rgba(244, 63, 94, 0.5)';
     ctx.font = `600 11px 'JetBrains Mono', monospace`;
     ctx.fillText('TIKTOK / REELS SAFE ZONE', 24, topSafe - 12);
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // 1. CYBER HORIZON (Avee Gallery Template - image_93e7ec11.png)
+  // Ceiling & Floor Inverted Equalizer Bars with Center Waveform HUD Banner
+  // =========================================================================
+  private renderCyberHorizon(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    config: VisualizerConfig,
+    freqData: Uint8Array,
+    timeData: Uint8Array,
+    beatState: BeatDetectionState
+  ): void {
+    const barCount = 48;
+    const barWidth = Math.max(3, (width * 0.95) / (barCount * 2) - 2.5);
+    const primary = config.bars.primaryColor || '#2dd4bf';
+    const accent = config.bars.accentColor || '#ffffff';
+
+    ctx.save();
+
+    // 1. Perspective Elliptical Arcs in Background
+    ctx.strokeStyle = 'rgba(45, 212, 191, 0.12)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(width / 2, height / 2, width * 0.48, height * 0.38, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(width / 2, height / 2, width * 0.42, height * 0.32, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 2. Ceiling Inverted Spectrum Bars (Hanging down from y = 0)
+    for (let i = 0; i < barCount; i++) {
+      const bin = Math.floor(Math.pow(i / barCount, 1.35) * (freqData.length * 0.5));
+      const val = (freqData[bin] || 0) / 255;
+      const barH = Math.max(4, val * 120 * config.beatDetection.bassBoost * (0.8 + beatState.pulseDecay * 0.4));
+
+      // Left wing
+      const lx = width / 2 - (i + 1) * (barWidth + 2.5);
+      // Right wing
+      const rx = width / 2 + i * (barWidth + 2.5);
+
+      const topGrad = ctx.createLinearGradient(0, 0, 0, barH);
+      topGrad.addColorStop(0, primary);
+      topGrad.addColorStop(1, accent);
+
+      ctx.fillStyle = topGrad;
+      ctx.shadowBlur = 12 * beatState.pulseDecay;
+      ctx.shadowColor = primary;
+
+      ctx.fillRect(lx, 0, barWidth, barH);
+      ctx.fillRect(rx, 0, barWidth, barH);
+
+      // Tip cap dots
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(lx + barWidth / 2, barH + 4, barWidth / 2, 0, Math.PI * 2);
+      ctx.arc(rx + barWidth / 2, barH + 4, barWidth / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 3. Floor Spectrum Bars (Standing up from y = height)
+    for (let i = 0; i < barCount; i++) {
+      const bin = Math.floor(Math.pow(i / barCount, 1.35) * (freqData.length * 0.5));
+      const val = (freqData[bin] || 0) / 255;
+      const barH = Math.max(4, val * 120 * config.beatDetection.bassBoost * (0.8 + beatState.pulseDecay * 0.4));
+
+      const lx = width / 2 - (i + 1) * (barWidth + 2.5);
+      const rx = width / 2 + i * (barWidth + 2.5);
+
+      const botGrad = ctx.createLinearGradient(0, height, 0, height - barH);
+      botGrad.addColorStop(0, primary);
+      botGrad.addColorStop(1, accent);
+
+      ctx.fillStyle = botGrad;
+      ctx.shadowBlur = 12 * beatState.pulseDecay;
+      ctx.shadowColor = primary;
+
+      ctx.fillRect(lx, height - barH, barWidth, barH);
+      ctx.fillRect(rx, height - barH, barWidth, barH);
+
+      // Tip cap dots
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(lx + barWidth / 2, height - barH - 4, barWidth / 2, 0, Math.PI * 2);
+      ctx.arc(rx + barWidth / 2, height - barH - 4, barWidth / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 4. Center Audio HUD Glass Banner
+    const bannerW = Math.min(width * 0.88, 760);
+    const bannerH = 110;
+    const bannerX = (width - bannerW) / 2;
+    const bannerY = (height - bannerH) / 2;
+
+    // Glass backdrop
+    ctx.fillStyle = 'rgba(5, 15, 20, 0.75)';
+    ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
+    ctx.strokeStyle = 'rgba(45, 212, 191, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
+
+    // Left Geometric Triangle [◀] Prev
+    const triSize = 36;
+    const leftTriX = bannerX + 45;
+    const centerLineY = height / 2;
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = primary;
+    ctx.beginPath();
+    ctx.moveTo(leftTriX, centerLineY - triSize);
+    ctx.lineTo(leftTriX - triSize * 0.9, centerLineY);
+    ctx.lineTo(leftTriX, centerLineY + triSize);
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.font = `600 13px 'JetBrains Mono', monospace`;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('Prev', leftTriX - triSize * 0.65, centerLineY + 5);
+
+    // Right Geometric Triangle Next [▶]
+    const rightTriX = bannerX + bannerW - 45;
+    ctx.beginPath();
+    ctx.moveTo(rightTriX, centerLineY - triSize);
+    ctx.lineTo(rightTriX + triSize * 0.9, centerLineY);
+    ctx.lineTo(rightTriX, centerLineY + triSize);
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.fillText('Next', rightTriX + 8, centerLineY + 5);
+
+    // Dotted Audio Waveform Line connecting between left and right controls
+    const waveStartX = leftTriX + 16;
+    const waveEndX = rightTriX - 16;
+    const waveWidth = waveEndX - waveStartX;
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = primary;
+
+    const wavePoints = 40;
+    const step = waveWidth / wavePoints;
+
+    for (let i = 0; i < wavePoints; i++) {
+      const wx = waveStartX + i * step;
+      // Skip center region where text sits
+      const distFromCenter = Math.abs(wx - width / 2);
+      if (distFromCenter < 140) {
+        // Dotted horizontal line
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fillRect(wx - 2, centerLineY - 1, 4, 2);
+        continue;
+      }
+
+      const tIdx = Math.floor((i / wavePoints) * timeData.length);
+      const tVal = ((timeData[tIdx] || 128) - 128) / 128;
+      const waveH = tVal * 28 * (1.0 + beatState.pulseDecay * 0.8);
+
+      ctx.fillStyle = primary;
+      ctx.fillRect(wx - 1.5, centerLineY - waveH / 2, 3, Math.max(3, Math.abs(waveH)));
+    }
+
+    // Centered Typography
+    ctx.textAlign = 'center';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = primary;
+
+    // Artist / "Your Name"
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `700 22px 'Plus Jakarta Sans', sans-serif`;
+    ctx.fillText(config.audio.artistName || 'Your Name', width / 2, centerLineY - 14);
+
+    // Title / "Song Title / Tagline"
+    ctx.fillStyle = primary;
+    ctx.font = `600 15px 'Outfit', sans-serif`;
+    ctx.fillText(config.audio.trackTitle || 'Song Title / Tagline', width / 2, centerLineY + 28);
+
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // 2. PHONK REAPER CROWN (Avee Gallery Template - image_60e223eb.png)
+  // Double Dynamic Contour Waveform with Crown Spikes & Phonk Drift Emblem
+  // =========================================================================
+  private renderPhonkCrown(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    cx: number,
+    cy: number,
+    config: VisualizerConfig,
+    freqData: Uint8Array,
+    timeData: Uint8Array,
+    beatState: BeatDetectionState
+  ): void {
+    const radius = (config.bars.circleRadius || 140) * (config.layout.scale || 1.0) * (1.0 + beatState.pulseDecay * 0.22);
+    const primary = config.bars.primaryColor || '#3b82f6';
+    const secondary = config.bars.secondaryColor || '#8b5cf6';
+    const accent = config.bars.accentColor || '#60a5fa';
+
+    ctx.save();
+
+    // 1. Phonk Eerie Radial Aura
+    const aura = ctx.createRadialGradient(cx, cy, radius * 0.4, cx, cy, radius * 2.2);
+    aura.addColorStop(0, 'rgba(59, 130, 246, 0.25)');
+    aura.addColorStop(0.5, 'rgba(139, 92, 246, 0.12)');
+    aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = aura;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.translate(cx, cy);
+
+    // 2. Outer Crown Spikes Contour Ring
+    const points = 72;
+    ctx.shadowBlur = config.bars.glowStrength * (0.8 + beatState.pulseDecay * 0.8);
+    ctx.shadowColor = primary;
+    ctx.lineWidth = 3.5;
+
+    ctx.beginPath();
+    for (let i = 0; i <= points; i++) {
+      const idx = i % points;
+      const angle = (idx / points) * Math.PI * 2 - Math.PI / 2; // start from top
+      const freqBin = Math.floor((idx / points) * (freqData.length * 0.45));
+      const val = (freqData[freqBin] || 0) / 255;
+
+      // Crown spikes on the top hemisphere (between -60 deg and +60 deg from top)
+      const topFactor = Math.abs(angle + Math.PI / 2);
+      const isCrownZone = topFactor < Math.PI * 0.35;
+      const crownMultiplier = isCrownZone ? 1.8 + Math.sin(idx * 2) * 0.5 : 1.0;
+
+      const spikeH = val * 90 * config.beatDetection.bassBoost * crownMultiplier * (0.85 + beatState.pulseDecay * 0.4);
+      const r = radius + spikeH;
+
+      const px = Math.cos(angle) * r;
+      const py = Math.sin(angle) * r;
+
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+
+    const crownGrad = ctx.createLinearGradient(0, -radius - 80, 0, radius + 80);
+    crownGrad.addColorStop(0, '#ffffff');
+    crownGrad.addColorStop(0.5, primary);
+    crownGrad.addColorStop(1, secondary);
+
+    ctx.strokeStyle = crownGrad;
+    ctx.stroke();
+
+    // 3. Inner Smooth Oscillating Waveform Ring
+    ctx.beginPath();
+    for (let i = 0; i <= points; i++) {
+      const idx = i % points;
+      const angle = (idx / points) * Math.PI * 2;
+      const tIdx = Math.floor((idx / points) * timeData.length);
+      const tVal = ((timeData[tIdx] || 128) - 128) / 128;
+
+      const r = radius * 0.88 + tVal * 24 * (1.0 + beatState.pulseDecay);
+      const px = Math.cos(angle) * r;
+      const py = Math.sin(angle) * r;
+
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // 4. Central Phonk Reaper Badge & Crown Silhouette
+    const badgeR = radius * 0.72;
+    ctx.fillStyle = '#050814';
+    ctx.beginPath();
+    ctx.arc(0, 0, badgeR, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = primary;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Crown Icon inside center badge
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = primary;
+    ctx.beginPath();
+    ctx.moveTo(-32, 10);
+    ctx.lineTo(-40, -18);
+    ctx.lineTo(-14, -6);
+    ctx.lineTo(0, -28); // center crown point
+    ctx.lineTo(14, -6);
+    ctx.lineTo(40, -18);
+    ctx.lineTo(32, 10);
+    ctx.closePath();
+    ctx.fill();
+
+    // Crown base jewels
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(-22, 18, 3, 0, Math.PI * 2);
+    ctx.arc(0, 18, 3.5, 0, Math.PI * 2);
+    ctx.arc(22, 18, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // 5. Signature Phonk Brand Stamp (Lower Left)
+    ctx.save();
+    const tagX = 42;
+    const tagY = height - 75;
+
+    // Green accent line
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(tagX, tagY - 24, 4, 34);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `800 24px 'Plus Jakarta Sans', sans-serif`;
+    ctx.fillText('PHONK', tagX + 12, tagY - 4);
+
+    ctx.fillStyle = '#22c55e';
+    ctx.font = `700 13px 'JetBrains Mono', monospace`;
+    ctx.fillText('AVEE PLAYER TEMPLATE', tagX + 12, tagY + 14);
+
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // 3. NEON BOX FRAME (Avee Gallery Template - image_4bb5b174.png)
+  // 4-Sided Equalizer Frame with Floating Glowing Hearts and Top Script
+  // =========================================================================
+  private renderNeonBoxFrame(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    config: VisualizerConfig,
+    freqData: Uint8Array,
+    beatState: BeatDetectionState,
+    playbackTime: number
+  ): void {
+    const boxW = Math.min(width * 0.72, 680);
+    const boxH = Math.min(height * 0.65, 480);
+    const bx = (width - boxW) / 2;
+    const by = (height - boxH) / 2;
+
+    const primary = config.bars.primaryColor || '#38bdf8';
+    const accent = config.bars.accentColor || '#ffffff';
+
+    ctx.save();
+
+    // 1. Glowing Box Frame Borders
+    ctx.shadowBlur = 18 * (0.8 + beatState.pulseDecay * 0.6);
+    ctx.shadowColor = primary;
+    ctx.strokeStyle = primary;
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(bx, by, boxW, boxH);
+
+    // 2. Corner Bracket Highlights
+    const cornerSize = 24;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3.5;
+
+    // Top-left
+    ctx.beginPath();
+    ctx.moveTo(bx, by + cornerSize);
+    ctx.lineTo(bx, by);
+    ctx.lineTo(bx + cornerSize, by);
+    ctx.stroke();
+
+    // Top-right
+    ctx.beginPath();
+    ctx.moveTo(bx + boxW - cornerSize, by);
+    ctx.lineTo(bx + boxW, by);
+    ctx.lineTo(bx + boxW, by + cornerSize);
+    ctx.stroke();
+
+    // Bottom-left
+    ctx.beginPath();
+    ctx.moveTo(bx, by + boxH - cornerSize);
+    ctx.lineTo(bx, by + boxH);
+    ctx.lineTo(bx + cornerSize, by + boxH);
+    ctx.stroke();
+
+    // Bottom-right
+    ctx.beginPath();
+    ctx.moveTo(bx + boxW - cornerSize, by + boxH);
+    ctx.lineTo(bx + boxW, by + boxH);
+    ctx.lineTo(bx + boxW, by + boxH - cornerSize);
+    ctx.stroke();
+
+    // 3. Equalizer Bars along all 4 Frame Edges
+    const hBarCount = 36;
+    const vBarCount = 24;
+    const barWidth = 3;
+
+    // Top Edge Spectrum Bars (Shooting inward and outward)
+    for (let i = 0; i < hBarCount; i++) {
+      const bin = Math.floor((i / hBarCount) * (freqData.length * 0.4));
+      const val = (freqData[bin] || 0) / 255;
+      const barH = val * 55 * config.beatDetection.bassBoost * (0.8 + beatState.pulseDecay * 0.4);
+
+      const x = bx + 20 + (i / (hBarCount - 1)) * (boxW - 40);
+
+      // Inward bar
+      ctx.fillStyle = primary;
+      ctx.fillRect(x - barWidth / 2, by, barWidth, barH);
+      // Outward bar
+      ctx.fillStyle = accent;
+      ctx.fillRect(x - barWidth / 2, by - barH * 0.6, barWidth, barH * 0.6);
+    }
+
+    // Bottom Edge Spectrum Bars
+    for (let i = 0; i < hBarCount; i++) {
+      const bin = Math.floor((i / hBarCount) * (freqData.length * 0.4));
+      const val = (freqData[bin] || 0) / 255;
+      const barH = val * 55 * config.beatDetection.bassBoost * (0.8 + beatState.pulseDecay * 0.4);
+
+      const x = bx + 20 + (i / (hBarCount - 1)) * (boxW - 40);
+
+      ctx.fillStyle = primary;
+      ctx.fillRect(x - barWidth / 2, by + boxH - barH, barWidth, barH);
+      ctx.fillStyle = accent;
+      ctx.fillRect(x - barWidth / 2, by + boxH, barWidth, barH * 0.6);
+    }
+
+    // Left Edge Vertical Spectrum Bars
+    for (let i = 0; i < vBarCount; i++) {
+      const bin = Math.floor((i / vBarCount) * (freqData.length * 0.4));
+      const val = (freqData[bin] || 0) / 255;
+      const barH = val * 45 * config.beatDetection.bassBoost * (0.8 + beatState.pulseDecay * 0.4);
+
+      const y = by + 20 + (i / (vBarCount - 1)) * (boxH - 40);
+
+      ctx.fillStyle = primary;
+      ctx.fillRect(bx, y - barWidth / 2, barH, barWidth);
+      ctx.fillStyle = accent;
+      ctx.fillRect(bx - barH * 0.6, y - barWidth / 2, barH * 0.6, barWidth);
+    }
+
+    // Right Edge Vertical Spectrum Bars
+    for (let i = 0; i < vBarCount; i++) {
+      const bin = Math.floor((i / vBarCount) * (freqData.length * 0.4));
+      const val = (freqData[bin] || 0) / 255;
+      const barH = val * 45 * config.beatDetection.bassBoost * (0.8 + beatState.pulseDecay * 0.4);
+
+      const y = by + 20 + (i / (vBarCount - 1)) * (boxH - 40);
+
+      ctx.fillStyle = primary;
+      ctx.fillRect(bx + boxW - barH, y - barWidth / 2, barH, barWidth);
+      ctx.fillStyle = accent;
+      ctx.fillRect(bx + boxW, y - barWidth / 2, barH * 0.6, barWidth);
+    }
+
+    // 4. Top Cursive Title ("Falling" or Track Title)
+    ctx.textAlign = 'center';
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = primary;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `italic 700 36px 'Outfit', cursive, sans-serif`;
+    ctx.fillText(config.audio.trackTitle || 'Falling', width / 2, by - 35);
+
+    // 5. Bottom Seeker Bar & Time (e.g. 0:45)
+    const mins = Math.floor(playbackTime / 60);
+    const secs = Math.floor(playbackTime % 60).toString().padStart(2, '0');
+    const timeStr = `${mins}:${secs}`;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `600 15px 'JetBrains Mono', monospace`;
+    ctx.fillText(timeStr, width / 2, by + boxH + 34);
+
+    // Progress line
+    const progressW = boxW * 0.65;
+    const progressX = (width - progressW) / 2;
+    const progressY = by + boxH + 52;
+    const pct = Math.min(1.0, playbackTime / Math.max(1, config.audio.duration || 30));
+
+    // Background track
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.fillRect(progressX, progressY, progressW, 3);
+
+    // Filled progress
+    ctx.fillStyle = primary;
+    ctx.fillRect(progressX, progressY, progressW * pct, 3);
+
+    // Neon pip
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(progressX + progressW * pct, progressY + 1.5, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // 4. 3D CUBE WARP PORTAL (Avee Gallery Template - image_54955e6a.png)
+  // Rectangular Cyber Frame with 3D Exploding Cubes Flying Into View
+  // =========================================================================
+  private renderTunnelPortal(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    config: VisualizerConfig,
+    freqData: Uint8Array,
+    timeData: Uint8Array,
+    beatState: BeatDetectionState,
+    playbackTime: number
+  ): void {
+    const primary = config.bars.primaryColor || '#0ea5e9';
+    const accent = config.bars.accentColor || '#38bdf8';
+
+    ctx.save();
+
+    // 1. Cyber Wave Outer Border Frame
+    const frameW = Math.min(width * 0.75, 720);
+    const frameH = Math.min(height * 0.72, 520);
+    const fx = (width - frameW) / 2;
+    const fy = (height - frameH) / 2;
+
+    ctx.strokeStyle = primary;
+    ctx.lineWidth = 2.5;
+    ctx.shadowBlur = 18 * (0.8 + beatState.pulseDecay * 0.5);
+    ctx.shadowColor = primary;
+
+    // Draw wavy contour along top & bottom border lines
+    ctx.beginPath();
+    const segments = 40;
+    // Top wavy line
+    for (let i = 0; i <= segments; i++) {
+      const x = fx + (i / segments) * frameW;
+      const tVal = ((timeData[i % timeData.length] || 128) - 128) / 128;
+      const y = fy + tVal * 12 * (1 + beatState.pulseDecay);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    // Right side
+    ctx.lineTo(fx + frameW, fy + frameH);
+    // Bottom wavy line
+    for (let i = segments; i >= 0; i--) {
+      const x = fx + (i / segments) * frameW;
+      const tVal = ((timeData[(i + 20) % timeData.length] || 128) - 128) / 128;
+      const y = fy + frameH + tVal * 12 * (1 + beatState.pulseDecay);
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(fx, fy);
+    ctx.closePath();
+    ctx.stroke();
+
+    // 2. 3D Warping Cubes (Flying from Center Outward)
+    const vpX = width / 2;
+    const vpY = height / 2;
+    const warpSpeed = 10 + beatState.beatIntensity * 45;
+
+    for (const cube of this.warpCubes) {
+      cube.z -= warpSpeed;
+      if (cube.z <= 25) {
+        cube.z = 900;
+        cube.x = (Math.random() - 0.5) * 1100;
+        cube.y = (Math.random() - 0.5) * 750;
+      }
+
+      // Perspective Projection
+      const focal = 320;
+      const projX = vpX + (cube.x * focal) / cube.z;
+      const projY = vpY + (cube.y * focal) / cube.z;
+
+      // Distance scaling
+      const distScale = Math.min(4.5, focal / cube.z);
+      const curSize = cube.size * distScale * (0.9 + beatState.pulseDecay * 0.4);
+
+      if (projX < -50 || projX > width + 50 || projY < -50 || projY > height + 50) {
+        continue;
+      }
+
+      ctx.save();
+      ctx.translate(projX, projY);
+      ctx.rotate(cube.rot + playbackTime * 0.4);
+
+      ctx.shadowBlur = 10 * distScale;
+      ctx.shadowColor = accent;
+
+      // Front Face
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = Math.min(1.0, (cube.alpha * distScale * 0.6));
+      ctx.fillRect(-curSize / 2, -curSize / 2, curSize, curSize);
+
+      // Top Perspective Face
+      ctx.fillStyle = primary;
+      ctx.globalAlpha = Math.min(1.0, (cube.alpha * distScale * 0.8));
+      ctx.beginPath();
+      ctx.moveTo(-curSize / 2, -curSize / 2);
+      ctx.lineTo(-curSize / 4, -curSize * 0.9);
+      ctx.lineTo(curSize * 0.75, -curSize * 0.9);
+      ctx.lineTo(curSize / 2, -curSize / 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Right Perspective Face
+      ctx.fillStyle = accent;
+      ctx.globalAlpha = Math.min(1.0, (cube.alpha * distScale * 0.5));
+      ctx.beginPath();
+      ctx.moveTo(curSize / 2, -curSize / 2);
+      ctx.lineTo(curSize * 0.75, -curSize * 0.9);
+      ctx.lineTo(curSize * 0.75, curSize * 0.2);
+      ctx.lineTo(curSize / 2, curSize / 2);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // 3. Lower Left Cursive Script ("My love....")
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = accent;
+    ctx.fillStyle = '#22d3ee';
+    ctx.font = `italic 700 38px 'Outfit', cursive, sans-serif`;
+    ctx.fillText('My love....', fx + 30, fy + frameH - 35);
+
+    // 4. Lower Right Digital Timestamp Box (0:16)
+    const mins = Math.floor(playbackTime / 60);
+    const secs = Math.floor(playbackTime % 60).toString().padStart(2, '0');
+    const timeStr = `${mins}:${secs}`;
+
+    ctx.fillStyle = 'rgba(14, 165, 233, 0.2)';
+    ctx.fillRect(fx + frameW - 110, fy + frameH - 65, 80, 30);
+    ctx.strokeStyle = primary;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(fx + frameW - 110, fy + frameH - 65, 80, 30);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `600 14px 'JetBrains Mono', monospace`;
+    ctx.fillText(timeStr, fx + frameW - 92, fy + frameH - 45);
+
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // 5. TWIN BASS WOOFERS (Avee Gallery Template - image_be9f7c65.png)
+  // Dual Subwoofers with Fiery Sunburst Spikes & Bottom Triple Sine Waves
+  // =========================================================================
+  private renderTwinWoofers(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    config: VisualizerConfig,
+    freqData: Uint8Array,
+    timeData: Uint8Array,
+    beatState: BeatDetectionState
+  ): void {
+    const woofer1X = width * 0.23;
+    const woofer2X = width * 0.77;
+    const wooferY = height * 0.42;
+
+    const baseR = Math.min(width * 0.15, 140) * (config.layout.scale || 1.0);
+    // Subwoofer cone physically pulses with low bass energy!
+    const activeR = baseR * (1.0 + beatState.bassEnergy * 0.32);
+
+    ctx.save();
+
+    // Helper to draw one full subwoofer assembly
+    const drawWoofer = (wx: number, wy: number) => {
+      ctx.save();
+      ctx.translate(wx, wy);
+
+      // 1. Fiery Sunburst Audio Flare Bars radiating outward 360°
+      const flareCount = 48;
+      for (let i = 0; i < flareCount; i++) {
+        const bin = Math.floor((i / flareCount) * (freqData.length * 0.35));
+        const val = (freqData[bin] || 0) / 255;
+        const flareH = Math.max(8, val * 110 * config.beatDetection.bassBoost * (0.85 + beatState.pulseDecay * 0.45));
+
+        const angle = (i / flareCount) * Math.PI * 2;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+
+        const x1 = cos * (activeR + 10);
+        const y1 = sin * (activeR + 10);
+        const x2 = cos * (activeR + 10 + flareH);
+        const y2 = sin * (activeR + 10 + flareH);
+
+        const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.3, '#f59e0b');
+        grad.addColorStop(0.7, '#ef4444');
+        grad.addColorStop(1, 'rgba(225, 29, 72, 0)');
+
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 4;
+        ctx.shadowBlur = 16 * beatState.pulseDecay;
+        ctx.shadowColor = '#ef4444';
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      // 2. Heavy Speaker Outer Rubber Surround
+      ctx.fillStyle = '#1c1917';
+      ctx.beginPath();
+      ctx.arc(0, 0, activeR + 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 4;
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = '#ef4444';
+      ctx.stroke();
+
+      // 3. Vibrating Subwoofer Speaker Cone
+      const coneGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, activeR);
+      coneGrad.addColorStop(0, '#0c0a09');
+      coneGrad.addColorStop(0.6, '#292524');
+      coneGrad.addColorStop(1, '#1c1917');
+      ctx.fillStyle = coneGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, activeR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Concentric Bass Rings
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, activeR * 0.75, 0, Math.PI * 2);
+      ctx.arc(0, 0, activeR * 0.55, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 4. Center Dust Cap Dome (Glows red with bass)
+      const capR = activeR * 0.35;
+      const capGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, capR);
+      capGrad.addColorStop(0, '#fca5a5');
+      capGrad.addColorStop(0.4, '#dc2626');
+      capGrad.addColorStop(1, '#450a0a');
+
+      ctx.fillStyle = capGrad;
+      ctx.shadowBlur = 25 * beatState.pulseDecay;
+      ctx.shadowColor = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(0, 0, capR, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.restore();
+    };
+
+    // Draw Left & Right Woofers
+    drawWoofer(woofer1X, wooferY);
+    drawWoofer(woofer2X, wooferY);
+
+    // 2. Bottom Triple Sinewave Oscilloscope Ribbons
+    const ribbonY = height * 0.82;
+    const waveCount = 80;
+    const step = width / waveCount;
+
+    // Ribbon 1: Neon Red Sine
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 3.5;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#ef4444';
+    ctx.beginPath();
+    for (let i = 0; i <= waveCount; i++) {
+      const x = i * step;
+      const tIdx = Math.floor((i / waveCount) * timeData.length);
+      const tVal = ((timeData[tIdx] || 128) - 128) / 128;
+      const y = ribbonY + tVal * 45 * (1.0 + beatState.pulseDecay * 0.8) + Math.sin(i * 0.18) * 15;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Ribbon 2: Crisp White Sine
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = '#ffffff';
+    ctx.beginPath();
+    for (let i = 0; i <= waveCount; i++) {
+      const x = i * step;
+      const tIdx = Math.floor(((i + 15) / waveCount) * timeData.length);
+      const tVal = ((timeData[tIdx % timeData.length] || 128) - 128) / 128;
+      const y = ribbonY - 14 + tVal * 38 * (1.0 + beatState.pulseDecay * 0.6) + Math.sin(i * 0.18 + 1.2) * 20;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Ribbon 3: Neon Violet Sine
+    ctx.strokeStyle = '#a855f7';
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = '#a855f7';
+    ctx.beginPath();
+    for (let i = 0; i <= waveCount; i++) {
+      const x = i * step;
+      const tIdx = Math.floor(((i + 30) / waveCount) * timeData.length);
+      const tVal = ((timeData[tIdx % timeData.length] || 128) - 128) / 128;
+      const y = ribbonY + 16 + tVal * 32 * (1.0 + beatState.pulseDecay * 0.5) + Math.sin(i * 0.18 + 2.4) * 18;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // 3. Center Headphone & "BROKEN HEART" Emblem
+    const centerBadgeX = width / 2;
+    const centerBadgeY = height * 0.72;
+
+    ctx.save();
+    ctx.textAlign = 'center';
+
+    // Headphone arch icon
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3.5;
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(centerBadgeX, centerBadgeY - 10, 22, Math.PI, 0);
+    ctx.stroke();
+
+    // Heart icon in center
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(centerBadgeX - 6, centerBadgeY - 10, 6, 0, Math.PI * 2);
+    ctx.arc(centerBadgeX + 6, centerBadgeY - 10, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // "BROKEN HEART" text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `800 20px 'Plus Jakarta Sans', sans-serif`;
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = '#ef4444';
+    ctx.fillText('BROKEN HEART', centerBadgeX, centerBadgeY + 24);
+
+    // Decorative underline
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(centerBadgeX - 70, centerBadgeY + 30);
+    ctx.lineTo(centerBadgeX + 70, centerBadgeY + 30);
+    ctx.stroke();
+
+    ctx.textAlign = 'left';
+    ctx.restore();
+
     ctx.restore();
   }
 

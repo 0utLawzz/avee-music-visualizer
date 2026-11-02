@@ -9,7 +9,12 @@ import {
   Sparkles,
   Zap,
   SlidersHorizontal,
-  Play
+  Play,
+  Crown,
+  Heart,
+  Box,
+  Volume2,
+  Tv
 } from 'lucide-react';
 
 interface TemplatePickerProps {
@@ -27,6 +32,7 @@ interface TemplateMeta {
   accent: string;
   icon: React.ReactNode;
   tags: string[];
+  badge?: string;
 }
 
 export const TemplatePicker: React.FC<TemplatePickerProps> = ({
@@ -36,14 +42,67 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
   onTestTransition
 }) => {
   const templates: TemplateMeta[] = [
+    // Avee Player Gallery Featured Templates (From User References)
+    {
+      id: 'cyber_horizon',
+      name: 'Cyber Horizon HUD',
+      tagline: 'Inverted ceiling & floor spectrum with realtime center waveform HUD and geometric skip controls.',
+      genre: 'Avee Gallery / Synthwave',
+      accent: 'from-teal-500 to-cyan-500',
+      icon: <Tv className="w-5 h-5 text-teal-400" />,
+      tags: ['Ceiling & Floor Bars', 'Center HUD Wave', 'Geometric Triangle HUD'],
+      badge: 'Avee #Gallery'
+    },
+    {
+      id: 'phonk_crown',
+      name: 'Phonk Reaper Crown',
+      tagline: 'Spiky crowned waveform contour ring with pulsing center reaper crest and drifting embers.',
+      genre: 'Phonk / Drift / 808',
+      accent: 'from-blue-600 to-indigo-600',
+      icon: <Crown className="w-5 h-5 text-blue-400" />,
+      tags: ['Crowned Peaks', 'Drift 808 Bass Shake', 'Phonk Tag'],
+      badge: 'Avee #Gallery'
+    },
+    {
+      id: 'neon_box_frame',
+      name: 'Neon Box Frame & Hearts',
+      tagline: '4-sided inward and outward box equalizer with floating glowing hearts, script typography, and seeker.',
+      genre: 'Lofi / Romantic / Chill',
+      accent: 'from-sky-500 to-cyan-400',
+      icon: <Heart className="w-5 h-5 text-sky-400" />,
+      tags: ['4-Edge Spectrum', 'Floating Hearts', 'Top Script & Seeker'],
+      badge: 'Avee #Gallery'
+    },
+    {
+      id: 'tunnel_portal',
+      name: '3D Cube Warp Portal',
+      tagline: 'Cyber wave portal frame with 3D perspective cubes streaming into screen, accelerated by kick drops.',
+      genre: 'EDM / Cyber / Future',
+      accent: 'from-sky-500 to-indigo-500',
+      icon: <Box className="w-5 h-5 text-sky-400" />,
+      tags: ['3D Warp Cubes', 'Portal Wave Border', 'Kick Acceleration'],
+      badge: 'Avee #Gallery'
+    },
+    {
+      id: 'twin_woofers',
+      name: 'Twin Bass Woofers',
+      tagline: 'Dual subwoofers pumping with bass, surrounded by fiery solar flares and triple oscilloscope sinewaves.',
+      genre: 'Bass Boosted / Car Audio',
+      accent: 'from-red-600 to-orange-500',
+      icon: <Volume2 className="w-5 h-5 text-red-400" />,
+      tags: ['Dual Subwoofers', 'Sunburst Flares', 'Triple Sine Waves'],
+      badge: 'Avee #Gallery'
+    },
+
+    // Classic Signature Presets
     {
       id: 'avee_classic',
-      name: 'Avee Bass Ring (OutLawz)',
+      name: 'Avee Classic Dual-Wing',
       tagline: 'Signature Avee Player dual-winged spectrum with side waveforms and central badge kick.',
       genre: 'Trap / Phonk / Wave',
       accent: 'from-rose-500 to-red-600',
       icon: <Radio className="w-5 h-5 text-rose-400" />,
-      tags: ['Symmetric Wings', 'Horizontal Waveforms', 'VHS Overlay']
+      tags: ['Symmetric Wings', 'Side Waveforms', 'VHS Overlay']
     },
     {
       id: 'trap_nation',
@@ -225,6 +284,11 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
                     <span className="text-xs font-semibold text-slate-400">
                       {tpl.genre}
                     </span>
+                    {tpl.badge && (
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 tracking-wider">
+                        {tpl.badge}
+                      </span>
+                    )}
                   </div>
 
                   {isSelected && (

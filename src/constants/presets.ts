@@ -167,6 +167,301 @@ export const TEMPLATE_CONFIGS: Record<string, DeepPartial<VisualizerConfig>> = {
     }
   },
 
+  cyber_horizon: {
+    template: 'cyber_horizon',
+    bars: {
+      barCount: 96,
+      circleRadius: 0,
+      barWidth: 5,
+      barMaxHeight: 180,
+      glowStrength: 30,
+      primaryColor: '#2dd4bf',
+      secondaryColor: '#06b6d4',
+      accentColor: '#ffffff',
+      waveLines: true,
+      barCapStyle: 'rounded',
+      innerBars: false,
+      symmetric: true
+    },
+    centerBadge: {
+      enabled: false,
+      imageUrl: '',
+      badgeText: '',
+      shape: 'shield',
+      size: 90,
+      borderWidth: 2,
+      borderColor: '#2dd4bf',
+      glowColor: '#06b6d4',
+      pulseIntensity: 1.1,
+      spinSpeed: 0
+    },
+    overlays: {
+      particles: true,
+      particleCount: 80,
+      particleColor: '#2dd4bf',
+      particleShape: 'circle',
+      particleBurstOnKick: true,
+      vhsEffect: true,
+      filmGrain: false,
+      lightLeak: false,
+      crtScanlines: true,
+      watermarkText: 'CYBER·HORIZON',
+      showTimestamp: true,
+      chromaticAberration: true
+    },
+    beatDetection: {
+      sensitivity: 1.35,
+      bassBoost: 2.2,
+      bassShakeStrength: 0.5,
+      smoothing: 0.8,
+      frequencyCutoff: 170
+    },
+    background: {
+      type: 'gradient',
+      mediaUrl: '',
+      blur: 0,
+      brightness: 0.85,
+      vignette: 0.75,
+      bassZoom: 1.12
+    }
+  },
+
+  phonk_crown: {
+    template: 'phonk_crown',
+    bars: {
+      barCount: 140,
+      circleRadius: 140,
+      barWidth: 4,
+      barMaxHeight: 230,
+      glowStrength: 35,
+      primaryColor: '#3b82f6',
+      secondaryColor: '#8b5cf6',
+      accentColor: '#22c55e',
+      waveLines: true,
+      barCapStyle: 'diamond',
+      innerBars: true,
+      symmetric: true
+    },
+    centerBadge: {
+      enabled: true,
+      imageUrl: '',
+      badgeText: 'PHONK',
+      shape: 'shield',
+      size: 110,
+      borderWidth: 4,
+      borderColor: '#60a5fa',
+      glowColor: '#3b82f6',
+      pulseIntensity: 1.45,
+      spinSpeed: 0.15
+    },
+    overlays: {
+      particles: true,
+      particleCount: 120,
+      particleColor: '#60a5fa',
+      particleShape: 'circle',
+      particleBurstOnKick: true,
+      vhsEffect: false,
+      filmGrain: true,
+      lightLeak: true,
+      crtScanlines: false,
+      watermarkText: 'PHONK DRIFT',
+      showTimestamp: true,
+      chromaticAberration: true
+    },
+    beatDetection: {
+      sensitivity: 1.5,
+      bassBoost: 2.7,
+      bassShakeStrength: 0.95,
+      smoothing: 0.75,
+      frequencyCutoff: 130
+    },
+    background: {
+      type: 'gradient',
+      mediaUrl: '',
+      blur: 2,
+      brightness: 0.8,
+      vignette: 0.85,
+      bassZoom: 1.25
+    }
+  },
+
+  neon_box_frame: {
+    template: 'neon_box_frame',
+    bars: {
+      barCount: 100,
+      circleRadius: 0,
+      barWidth: 4,
+      barMaxHeight: 140,
+      glowStrength: 28,
+      primaryColor: '#38bdf8',
+      secondaryColor: '#ffffff',
+      accentColor: '#06b6d4',
+      waveLines: true,
+      barCapStyle: 'flat',
+      innerBars: false,
+      symmetric: true
+    },
+    centerBadge: {
+      enabled: false,
+      imageUrl: '',
+      badgeText: 'FALLING',
+      shape: 'circle',
+      size: 70,
+      borderWidth: 2,
+      borderColor: '#38bdf8',
+      glowColor: '#38bdf8',
+      pulseIntensity: 1.1,
+      spinSpeed: 0
+    },
+    overlays: {
+      particles: true,
+      particleCount: 65,
+      particleColor: '#38bdf8',
+      particleShape: 'heart',
+      particleBurstOnKick: true,
+      vhsEffect: true,
+      filmGrain: true,
+      lightLeak: true,
+      crtScanlines: false,
+      watermarkText: 'Avee Box Player',
+      showTimestamp: true,
+      chromaticAberration: false
+    },
+    beatDetection: {
+      sensitivity: 1.25,
+      bassBoost: 2.0,
+      bassShakeStrength: 0.45,
+      smoothing: 0.84,
+      frequencyCutoff: 160
+    },
+    background: {
+      type: 'gradient',
+      mediaUrl: '',
+      blur: 3,
+      brightness: 0.75,
+      vignette: 0.7,
+      bassZoom: 1.1
+    }
+  },
+
+  tunnel_portal: {
+    template: 'tunnel_portal',
+    bars: {
+      barCount: 80,
+      circleRadius: 0,
+      barWidth: 5,
+      barMaxHeight: 160,
+      glowStrength: 32,
+      primaryColor: '#0ea5e9',
+      secondaryColor: '#6366f1',
+      accentColor: '#38bdf8',
+      waveLines: true,
+      barCapStyle: 'rounded',
+      innerBars: false,
+      symmetric: true
+    },
+    centerBadge: {
+      enabled: false,
+      imageUrl: '',
+      badgeText: '',
+      shape: 'circle',
+      size: 80,
+      borderWidth: 2,
+      borderColor: '#0ea5e9',
+      glowColor: '#6366f1',
+      pulseIntensity: 1.2,
+      spinSpeed: 0
+    },
+    overlays: {
+      particles: true,
+      particleCount: 90,
+      particleColor: '#bae6fd',
+      particleShape: 'cube',
+      particleBurstOnKick: true,
+      vhsEffect: false,
+      filmGrain: true,
+      lightLeak: false,
+      crtScanlines: false,
+      watermarkText: 'WARP PORTAL',
+      showTimestamp: true,
+      chromaticAberration: true
+    },
+    beatDetection: {
+      sensitivity: 1.4,
+      bassBoost: 2.3,
+      bassShakeStrength: 0.7,
+      smoothing: 0.79,
+      frequencyCutoff: 150
+    },
+    background: {
+      type: 'gradient',
+      mediaUrl: '',
+      blur: 1,
+      brightness: 0.8,
+      vignette: 0.8,
+      bassZoom: 1.2
+    }
+  },
+
+  twin_woofers: {
+    template: 'twin_woofers',
+    bars: {
+      barCount: 72,
+      circleRadius: 110,
+      barWidth: 4,
+      barMaxHeight: 190,
+      glowStrength: 34,
+      primaryColor: '#ef4444',
+      secondaryColor: '#f97316',
+      accentColor: '#ffffff',
+      waveLines: true,
+      barCapStyle: 'diamond',
+      innerBars: true,
+      symmetric: false
+    },
+    centerBadge: {
+      enabled: false,
+      imageUrl: '',
+      badgeText: '',
+      shape: 'circle',
+      size: 90,
+      borderWidth: 3,
+      borderColor: '#ef4444',
+      glowColor: '#f97316',
+      pulseIntensity: 1.4,
+      spinSpeed: 0
+    },
+    overlays: {
+      particles: true,
+      particleCount: 85,
+      particleColor: '#ef4444',
+      particleShape: 'heart',
+      particleBurstOnKick: true,
+      vhsEffect: true,
+      filmGrain: true,
+      lightLeak: true,
+      crtScanlines: false,
+      watermarkText: 'TWIN 808 WOOFERS',
+      showTimestamp: true,
+      chromaticAberration: true
+    },
+    beatDetection: {
+      sensitivity: 1.55,
+      bassBoost: 2.8,
+      bassShakeStrength: 1.0,
+      smoothing: 0.74,
+      frequencyCutoff: 120
+    },
+    background: {
+      type: 'gradient',
+      mediaUrl: '',
+      blur: 2,
+      brightness: 0.82,
+      vignette: 0.85,
+      bassZoom: 1.28
+    }
+  },
+
   neon_grid: {
     template: 'neon_grid',
     bars: {

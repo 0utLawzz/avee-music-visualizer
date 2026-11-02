@@ -3,6 +3,11 @@ export type AspectRatio = '16:9' | '9:16' | '1:1' | '4:5';
 export type TemplateId =
   | 'avee_classic'
   | 'trap_nation'
+  | 'cyber_horizon'
+  | 'phonk_crown'
+  | 'neon_box_frame'
+  | 'tunnel_portal'
+  | 'twin_woofers'
   | 'neon_grid'
   | 'monstercat_bars'
   | 'vinyl_record'
@@ -182,6 +187,7 @@ export interface VisualizerConfig {
     particles: boolean;
     particleCount: number;
     particleColor: string;
+    particleShape?: 'circle' | 'heart' | 'cube' | 'star';
     particleBurstOnKick: boolean;
     vhsEffect: boolean;
     filmGrain: boolean;
