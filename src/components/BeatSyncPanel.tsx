@@ -431,7 +431,7 @@ export const BeatSyncPanel: React.FC<BeatSyncPanelProps> = ({
         </div>
 
         {/* Fine-Tuning Sliders */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
           {/* Sub-Bass Threshold */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
@@ -514,6 +514,37 @@ export const BeatSyncPanel: React.FC<BeatSyncPanelProps> = ({
               }
               className="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer"
             />
+          </div>
+
+          {/* Beat Movement Smoothness (Fluidity) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-300">Motion Fluidity</span>
+              <span className="font-mono text-sky-400 font-bold tabular-nums">
+                {((config.beatDetection.movementSmoothing ?? 0.78) * 100).toFixed(0)}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0.2}
+              max={0.96}
+              step={0.02}
+              value={config.beatDetection.movementSmoothing ?? 0.78}
+              onChange={(e) =>
+                onUpdateConfig((prev) => ({
+                  ...prev,
+                  beatDetection: {
+                    ...prev.beatDetection,
+                    movementSmoothing: parseFloat(e.target.value)
+                  }
+                }))
+              }
+              className="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer accent-sky-400"
+            />
+            <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+              <span>Snappy Punch</span>
+              <span>Liquid Smooth</span>
+            </div>
           </div>
         </div>
       </div>

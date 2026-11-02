@@ -1,6 +1,6 @@
 export interface ExportOptions {
   durationSeconds: number;
-  fps: 30 | 60;
+  fps: 24 | 30 | 60 | number;
   bitrateBps: number;
   filename: string;
 }

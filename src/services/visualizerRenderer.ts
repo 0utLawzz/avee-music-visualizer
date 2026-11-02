@@ -28,6 +28,20 @@ export class VisualizerRenderer {
   private transitionDuration = 0.6;
   private transitionEffect: TransitionEffect = 'blur_dissolve';
 
+  // Smooth Beat Reactive Physics & Damped Harmonic Springs
+  private smoothBeatPulse = 0;
+  private smoothBassEnergy = 0;
+  private smoothMidEnergy = 0;
+  private smoothHighEnergy = 0;
+  private cameraRecoilPos = { x: 0, y: 0 };
+  private cameraRecoilVel = { x: 0, y: 0 };
+  private cameraZoomPos = 0;
+  private cameraZoomVel = 0;
+  private smoothedBars = new Float32Array(512);
+
+  // Running Glow Corner Edge Chaser
+  private runningEdgeProgress = 0;
+
   // 3D Portal Warp Cubes (Tunnel Portal Template)
   private warpCubes: { x: number; y: number; z: number; size: number; alpha: number; rot: number }[] = [];
 
@@ -148,26 +162,84 @@ export class VisualizerRenderer {
     const dt = Math.min((now - this.lastTime) / 1000, 0.1);
     this.lastTime = now;
 
-    // Apply spin speed
-    this.spinAngle += (config.centerBadge.spinSpeed || 0.2) * dt * (1 + beatState.pulseDecay * 1.5);
+    // Movement fluidity multiplier (0.1 snappy to 0.98 liquid)
+    const fluidity = Math.max(0.1, Math.min(0.98, config.beatDetection.movementSmoothing ?? 0.78));
 
-    // Camera shake from bass pulse
-    const shakeMult = config.beatDetection.bassShakeStrength || 0.6;
-    const shakeX = (Math.random() - 0.5) * beatState.pulseDecay * 18 * shakeMult;
-    const shakeY = (Math.random() - 0.5) * beatState.pulseDecay * 18 * shakeMult;
+    // Instant attack on beat kick
+    if (beatState.isBeat) {
+      this.smoothBeatPulse = Math.max(this.smoothBeatPulse, beatState.beatIntensity || 1.0);
+
+      // Organic harmonic recoil impulse for camera bounce instead of white noise jitter
+      const kickImpulse = (beatState.beatIntensity || 1.0) * 14 * (config.beatDetection.bassShakeStrength || 0.6);
+      const angle = Math.random() * Math.PI * 2;
+      this.cameraRecoilVel.x += Math.cos(angle) * kickImpulse;
+      this.cameraRecoilVel.y += Math.sin(angle) * kickImpulse;
+      this.cameraZoomVel += (beatState.beatIntensity || 1.0) * 0.04;
+    }
+
+    // Buttery exponential decay of pulse envelope
+    const pulseDecayRate = Math.exp(-dt * (15 * (1.05 - fluidity)));
+    this.smoothBeatPulse *= pulseDecayRate;
+    if (this.smoothBeatPulse < 0.001) this.smoothBeatPulse = 0;
+
+    // Smooth continuous frequency energy bands
+    const energyLerp = Math.min(1.0, dt * (18 * (1.05 - fluidity)));
+    this.smoothBassEnergy += (beatState.bassEnergy - this.smoothBassEnergy) * energyLerp;
+    this.smoothMidEnergy += (beatState.midEnergy - this.smoothMidEnergy) * energyLerp;
+    this.smoothHighEnergy += (beatState.highEnergy - this.smoothHighEnergy) * energyLerp;
+
+    // Damped harmonic spring physics for camera recoil & shake
+    const springK = 210;
+    const dampingC = 15;
+    this.cameraRecoilPos.x += this.cameraRecoilVel.x * dt;
+    this.cameraRecoilVel.x += (-springK * this.cameraRecoilPos.x - dampingC * this.cameraRecoilVel.x) * dt;
+    this.cameraRecoilPos.y += this.cameraRecoilVel.y * dt;
+    this.cameraRecoilVel.y += (-springK * this.cameraRecoilPos.y - dampingC * this.cameraRecoilVel.y) * dt;
+
+    // Smooth camera zoom bounce
+    this.cameraZoomPos += this.cameraZoomVel * dt;
+    this.cameraZoomVel += (-springK * this.cameraZoomPos - dampingC * this.cameraZoomVel) * dt;
+
+    // Compute liquid smoothed frequency spectrum buffer
+    const smoothFreq = this.computeSmoothedFrequencies(freqData, dt, fluidity);
+
+    // Composite effective beat detection state with buttery organic physics
+    const smoothBeatState: BeatDetectionState = {
+      isBeat: beatState.isBeat,
+      beatIntensity: Math.max(beatState.beatIntensity, this.smoothBeatPulse),
+      bassEnergy: this.smoothBassEnergy,
+      midEnergy: this.smoothMidEnergy,
+      highEnergy: this.smoothHighEnergy,
+      pulseDecay: this.smoothBeatPulse,
+      bpmEstimate: beatState.bpmEstimate,
+      isManualHit: beatState.isManualHit
+    };
+
+    // Apply spin speed
+    this.spinAngle += (config.centerBadge.spinSpeed || 0.2) * dt * (1 + smoothBeatState.pulseDecay * 1.5);
 
     ctx.save();
-    ctx.translate(shakeX, shakeY);
+
+    // Center camera zoom bounce
+    const zoomScale = 1.0 + Math.max(-0.04, Math.min(0.12, this.cameraZoomPos));
+    if (Math.abs(zoomScale - 1.0) > 0.001) {
+      ctx.translate(width / 2, height / 2);
+      ctx.scale(zoomScale, zoomScale);
+      ctx.translate(-width / 2, -height / 2);
+    }
+
+    // Camera shake / recoil translation
+    ctx.translate(this.cameraRecoilPos.x, this.cameraRecoilPos.y);
 
     // 1. Render Background Layer (With Smart Social Media Aspect Ratio Framing)
-    this.renderBackground(ctx, width, height, config, beatState, bgMedia);
+    this.renderBackground(ctx, width, height, config, smoothBeatState, bgMedia);
 
     // 2. Render Floating Particle Sparks
     if (config.overlays.particles) {
-      this.renderParticles(ctx, width, height, config, beatState);
+      this.renderParticles(ctx, width, height, config, smoothBeatState);
     }
 
-    // 3. Render Visualizer Bars & Core Rings
+    // 3. Render Visualizer Bars & Core Rings (with smooth frequency data)
     const vizCenterX = (config.layout.visualizerPos.x / 100) * width;
     const vizCenterY = (config.layout.visualizerPos.y / 100) * height;
 
@@ -180,9 +252,9 @@ export class VisualizerRenderer {
       vizCenterX,
       vizCenterY,
       config,
-      freqData,
+      smoothFreq,
       timeData,
-      beatState,
+      smoothBeatState,
       playbackTime
     );
 
@@ -193,7 +265,7 @@ export class VisualizerRenderer {
         vizCenterX,
         vizCenterY,
         config,
-        beatState,
+        smoothBeatState,
         logoImage
       );
     }
@@ -205,18 +277,23 @@ export class VisualizerRenderer {
 
     // 6. Render Custom Layered Graphic & Text Overlays
     if (config.customOverlays && config.customOverlays.length > 0) {
-      this.renderCustomOverlays(ctx, width, height, config, beatState, playbackTime);
+      this.renderCustomOverlays(ctx, width, height, config, smoothBeatState, playbackTime);
     }
 
     // 7. Render Built-in Aesthetic Overlays (Film Grain, VHS, Scanlines, Light Leaks)
-    this.renderOverlays(ctx, width, height, config, beatState, playbackTime);
+    this.renderOverlays(ctx, width, height, config, smoothBeatState, playbackTime);
 
-    // 8. Mobile Safe Zone Guides in 9:16 vertical mode (if enabled)
+    // 8. Running Glow Light over Corner Frame Edges
+    if (config.runningEdgeLight && config.runningEdgeLight.enabled) {
+      this.renderRunningEdgeGlow(ctx, width, height, config, smoothBeatState, dt);
+    }
+
+    // 9. Mobile Safe Zone Guides in 9:16 vertical mode (if enabled)
     if (config.aspectRatio === '9:16' && config.overlays.mobileSafeGuides) {
       this.renderMobileSafeZones(ctx, width, height);
     }
 
-    // 9. Render Layout Drag Guides if user is dragging an element
+    // 10. Render Layout Drag Guides if user is dragging an element
     if (isDraggingElement) {
       this.renderDragGuides(ctx, width, height, config, isDraggingElement);
     }
@@ -2165,4 +2242,301 @@ export class VisualizerRenderer {
 
     ctx.restore();
   }
+
+  /**
+   * Computes a smoothed FFT frequency spectrum buffer with dual-rate attack/decay physics.
+   * Kicks register instantly while bars glide down smoothly without steppy jitter.
+   */
+  private computeSmoothedFrequencies(freqData: Uint8Array, dt: number, fluidity: number): Uint8Array {
+    if (!freqData || freqData.length === 0) return freqData;
+
+    if (this.smoothedBars.length !== freqData.length) {
+      this.smoothedBars = new Float32Array(freqData.length);
+      for (let i = 0; i < freqData.length; i++) {
+        this.smoothedBars[i] = (freqData[i] || 0) / 255;
+      }
+    }
+
+    const result = new Uint8Array(freqData.length);
+    const attackRate = Math.min(1.0, dt * 52); // rapid response on kick attack
+    const fallRate = Math.min(1.0, dt * (13 * (1.05 - fluidity))); // liquid buttery falloff
+
+    for (let i = 0; i < freqData.length; i++) {
+      const raw = (freqData[i] || 0) / 255;
+      if (raw > this.smoothedBars[i]) {
+        this.smoothedBars[i] += (raw - this.smoothedBars[i]) * attackRate;
+      } else {
+        this.smoothedBars[i] += (raw - this.smoothedBars[i]) * fallRate;
+      }
+      result[i] = Math.min(255, Math.round(this.smoothedBars[i] * 255));
+    }
+
+    return result;
+  }
+
+  /**
+   * Renders the running glow light / neon laser chaser along the corner frame edges.
+   * Traces around the rounded perimeter with blazing hot head, fading trail, ambient bloom,
+   * and responsive corner bracket accents that ignite when passed.
+   */
+  private renderRunningEdgeGlow(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    config: VisualizerConfig,
+    beatState: BeatDetectionState,
+    dt: number
+  ): void {
+    const edgeCfg = config.runningEdgeLight;
+    if (!edgeCfg || !edgeCfg.enabled) return;
+
+    const primaryColor = edgeCfg.color || config.bars.primaryColor || '#ff2a55';
+    const secondaryColor = edgeCfg.secondaryColor || '#ffffff';
+    const speed = edgeCfg.speed ?? 0.85;
+    const thickness = edgeCfg.thickness ?? 4.0;
+    const trailLength = Math.max(0.04, Math.min(0.45, edgeCfg.length ?? 0.18));
+    const glowBlur = edgeCfg.glowBlur ?? 24;
+    const margin = Math.max(8, edgeCfg.margin ?? 24);
+    const cornerRadius = Math.max(0, edgeCfg.cornerRadius ?? 22);
+    const beamCount = edgeCfg.beamCount || 2;
+    const beatBoost = edgeCfg.beatBoost !== false;
+    const cornerBrackets = edgeCfg.cornerBrackets !== false;
+
+    // Bounding frame box
+    const frameW = width - 2 * margin;
+    const frameH = height - 2 * margin;
+    if (frameW <= 20 || frameH <= 20) return;
+
+    const x0 = margin;
+    const y0 = margin;
+    const R = Math.min(cornerRadius, frameW / 2, frameH / 2);
+
+    // Perimeter segment lengths
+    const L_top = frameW - 2 * R;
+    const L_arc = (Math.PI / 2) * R;
+    const L_right = frameH - 2 * R;
+    const L_bot = frameW - 2 * R;
+    const L_left = frameH - 2 * R;
+    const perimeter = 2 * L_top + 2 * L_right + 4 * L_arc;
+
+    if (perimeter <= 0) return;
+
+    // Helper: evaluate (x, y) coordinate at normalized perimeter distance u in [0, 1)
+    const getPointAtU = (u: number): { x: number; y: number } => {
+      let normU = u % 1.0;
+      if (normU < 0) normU += 1.0;
+      let d = normU * perimeter;
+
+      // 1. Top straight: left to right (from x0 + R to x0 + frameW - R)
+      if (d <= L_top) {
+        return { x: x0 + R + d, y: y0 };
+      }
+      d -= L_top;
+
+      // 2. Top-right corner arc
+      if (d <= L_arc) {
+        const theta = -Math.PI / 2 + (R > 0 ? d / R : 0);
+        return {
+          x: x0 + frameW - R + R * Math.cos(theta),
+          y: y0 + R + R * Math.sin(theta)
+        };
+      }
+      d -= L_arc;
+
+      // 3. Right straight: top to bottom
+      if (d <= L_right) {
+        return { x: x0 + frameW, y: y0 + R + d };
+      }
+      d -= L_right;
+
+      // 4. Bottom-right corner arc
+      if (d <= L_arc) {
+        const theta = 0 + (R > 0 ? d / R : 0);
+        return {
+          x: x0 + frameW - R + R * Math.cos(theta),
+          y: y0 + frameH - R + R * Math.sin(theta)
+        };
+      }
+      d -= L_arc;
+
+      // 5. Bottom straight: right to left
+      if (d <= L_bot) {
+        return { x: x0 + frameW - R - d, y: y0 + frameH };
+      }
+      d -= L_bot;
+
+      // 6. Bottom-left corner arc
+      if (d <= L_arc) {
+        const theta = Math.PI / 2 + (R > 0 ? d / R : 0);
+        return {
+          x: x0 + R + R * Math.cos(theta),
+          y: y0 + frameH - R + R * Math.sin(theta)
+        };
+      }
+      d -= L_arc;
+
+      // 7. Left straight: bottom to top
+      if (d <= L_left) {
+        return { x: x0, y: y0 + frameH - R - d };
+      }
+      d -= L_left;
+
+      // 8. Top-left corner arc
+      const theta = Math.PI + (R > 0 ? d / R : 0);
+      return {
+        x: x0 + R + R * Math.cos(theta),
+        y: y0 + R + R * Math.sin(theta)
+      };
+    };
+
+    // Advance running progress along perimeter
+    const beatSpeedMult = beatBoost ? (1.0 + this.smoothBeatPulse * 2.2) : 1.0;
+    this.runningEdgeProgress = (this.runningEdgeProgress + dt * (speed * 0.18) * beatSpeedMult) % 1.0;
+
+    ctx.save();
+
+    // 1. Faint Guideway / Glass Frame Perimeter Track
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = primaryColor;
+    ctx.globalAlpha = 0.16 + this.smoothBeatPulse * 0.12;
+    ctx.shadowBlur = (glowBlur * 0.5) * (0.8 + this.smoothBeatPulse * 0.5);
+    ctx.shadowColor = primaryColor;
+
+    ctx.beginPath();
+    if (typeof (ctx as any).roundRect === 'function') {
+      (ctx as any).roundRect(x0, y0, frameW, frameH, R);
+    } else {
+      ctx.strokeRect(x0, y0, frameW, frameH);
+    }
+    ctx.stroke();
+
+    const beamHeads: { x: number; y: number }[] = [];
+
+    // 2. Render Each Running Glow Chaser Beam
+    const numSteps = 34;
+    for (let b = 0; b < beamCount; b++) {
+      const headU = (this.runningEdgeProgress + b / beamCount) % 1.0;
+      const headPt = getPointAtU(headU);
+      beamHeads.push(headPt);
+
+      // Render Trail Micro-Segments from tail to head
+      for (let s = 1; s <= numSteps; s++) {
+        const t0 = (s - 1) / numSteps;
+        const t1 = s / numSteps;
+
+        const uA = headU - (1.0 - t0) * trailLength;
+        const uB = headU - (1.0 - t1) * trailLength;
+
+        const ptA = getPointAtU(uA);
+        const ptB = getPointAtU(uB);
+
+        const segmentAlpha = Math.pow(t1, 1.8) * (0.75 + this.smoothBeatPulse * 0.25);
+        const segWidth = thickness * (0.2 + 0.8 * t1);
+
+        ctx.beginPath();
+        ctx.moveTo(ptA.x, ptA.y);
+        ctx.lineTo(ptB.x, ptB.y);
+
+        ctx.lineWidth = segWidth;
+        ctx.globalAlpha = segmentAlpha;
+        ctx.strokeStyle = t1 > 0.88 ? secondaryColor : primaryColor;
+        ctx.shadowBlur = glowBlur * (0.7 + this.smoothBeatPulse * 0.7) * t1;
+        ctx.shadowColor = primaryColor;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+
+      // 3. Blazing White-Hot Head Flare & Star Sparkle
+      const headGlow = glowBlur * (1.2 + this.smoothBeatPulse * 0.8);
+      const headRadius = thickness * (1.1 + this.smoothBeatPulse * 0.35);
+
+      // Outer hot halo
+      ctx.beginPath();
+      ctx.arc(headPt.x, headPt.y, headRadius * 1.6, 0, Math.PI * 2);
+      ctx.fillStyle = primaryColor;
+      ctx.globalAlpha = 0.6 + this.smoothBeatPulse * 0.4;
+      ctx.shadowBlur = headGlow * 1.5;
+      ctx.shadowColor = primaryColor;
+      ctx.fill();
+
+      // Intense white core
+      ctx.beginPath();
+      ctx.arc(headPt.x, headPt.y, headRadius, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 1.0;
+      ctx.shadowBlur = headGlow;
+      ctx.shadowColor = secondaryColor;
+      ctx.fill();
+
+      // Cross Star Flare at the head
+      const flareLen = thickness * (2.8 + this.smoothBeatPulse * 2.2);
+      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = '#ffffff';
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.moveTo(headPt.x - flareLen, headPt.y);
+      ctx.lineTo(headPt.x + flareLen, headPt.y);
+      ctx.moveTo(headPt.x, headPt.y - flareLen);
+      ctx.lineTo(headPt.x, headPt.y + flareLen);
+      ctx.stroke();
+    }
+
+    // 4. Avee Player Corner Frame Brackets & Proximity Flare
+    if (cornerBrackets) {
+      const corners = [
+        { x: x0, y: y0, dirX: 1, dirY: 1 },                 // Top-Left
+        { x: x0 + frameW, y: y0, dirX: -1, dirY: 1 },        // Top-Right
+        { x: x0 + frameW, y: y0 + frameH, dirX: -1, dirY: -1 }, // Bottom-Right
+        { x: x0, y: y0 + frameH, dirX: 1, dirY: -1 }         // Bottom-Left
+      ];
+
+      for (const corner of corners) {
+        // Find minimum distance from any running beam head
+        let minDist = 9999;
+        for (const h of beamHeads) {
+          const dx = h.x - corner.x;
+          const dy = h.y - corner.y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < minDist) minDist = d;
+        }
+
+        // Proximity flare factor (0 at 160px away, 1 at corner)
+        const proximity = Math.max(0, Math.min(1, 1 - minDist / 160));
+        const bracketLen = 22 + proximity * 14 + this.smoothBeatPulse * 6;
+        const bracketW = 2.5 + proximity * 2.5;
+
+        ctx.lineWidth = bracketW;
+        ctx.strokeStyle = proximity > 0.4 ? '#ffffff' : primaryColor;
+        ctx.shadowBlur = 10 + proximity * 28 + this.smoothBeatPulse * 15;
+        ctx.shadowColor = primaryColor;
+        ctx.globalAlpha = 0.65 + proximity * 0.35;
+
+        // Draw L-Bracket
+        ctx.beginPath();
+        ctx.moveTo(corner.x, corner.y + corner.dirY * bracketLen);
+        ctx.lineTo(corner.x, corner.y);
+        ctx.lineTo(corner.x + corner.dirX * bracketLen, corner.y);
+        ctx.stroke();
+
+        // Corner tick dot if energized
+        if (proximity > 0.25 || this.smoothBeatPulse > 0.5) {
+          ctx.beginPath();
+          ctx.arc(
+            corner.x + corner.dirX * 6,
+            corner.y + corner.dirY * 6,
+            2.5 + proximity * 2,
+            0,
+            Math.PI * 2
+          );
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = primaryColor;
+          ctx.fill();
+        }
+      }
+    }
+
+    ctx.restore();
+  }
 }
+

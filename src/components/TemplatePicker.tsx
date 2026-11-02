@@ -261,57 +261,52 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
       </div>
 
       {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {templates.map((tpl) => {
           const isSelected = config.template === tpl.id;
           return (
             <div
               key={tpl.id}
               onClick={() => onSelectTemplate(tpl.id)}
-              className={`relative rounded-2xl p-5 border cursor-pointer transition-all flex flex-col justify-between group ${
+              className={`template-card relative p-4 border cursor-pointer transition-all flex flex-col justify-between group ${
                 isSelected
-                  ? 'bg-slate-900 border-rose-500/80 shadow-lg shadow-rose-500/10 ring-1 ring-rose-500/50'
-                  : 'bg-slate-900/60 border-slate-800/80 hover:bg-slate-900 hover:border-slate-700'
+                  ? 'bg-[#141517] border-[#ff3e00] shadow-md shadow-[#ff3e00]/10'
+                  : 'bg-[#0b0c0d] border-[rgba(240,240,240,0.12)] hover:border-[rgba(240,240,240,0.3)] hover:bg-[#141517]/60'
               }`}
             >
               <div>
                 {/* Header Badge */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-slate-800/80 border border-slate-700/50">
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded bg-black/60 border border-[rgba(240,240,240,0.1)]">
                       {tpl.icon}
                     </div>
-                    <span className="text-xs font-semibold text-slate-400">
+                    <span className="font-space text-[10px] text-[rgba(240,240,240,0.5)] uppercase tracking-wider">
                       {tpl.genre}
                     </span>
-                    {tpl.badge && (
-                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 tracking-wider">
-                        {tpl.badge}
-                      </span>
-                    )}
                   </div>
 
                   {isSelected && (
-                    <span className="flex items-center gap-1 text-[11px] font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 rounded-full">
-                      <Check className="w-3 h-3" /> Active
-                    </span>
+                    <div className="status-pill font-space text-[8px] bg-[#ff3e00] text-[#0b0c0d] font-bold px-1.5 py-0.5">
+                      CURR
+                    </div>
                   )}
                 </div>
 
                 {/* Title & Description */}
-                <h3 className="text-base font-bold text-white group-hover:text-rose-400 transition-colors">
+                <h3 className="font-syne text-sm font-bold text-[#f0f0f0] group-hover:text-[#ff3e00] transition-colors">
                   {tpl.name}
                 </h3>
-                <p className="text-xs text-slate-400 mt-1.5 leading-relaxed line-clamp-2">
+                <p className="text-xs text-[rgba(240,240,240,0.5)] mt-1 leading-relaxed line-clamp-2">
                   {tpl.tagline}
                 </p>
 
                 {/* Tags */}
-                <div className="flex flex-wrap gap-1.5 mt-4">
+                <div className="flex flex-wrap gap-1 mt-3">
                   {tpl.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="text-[11px] font-medium text-slate-400 bg-slate-800/60 px-2 py-0.5 rounded"
+                      className="font-space text-[9px] text-[rgba(240,240,240,0.5)] bg-black/50 border border-[rgba(240,240,240,0.08)] px-1.5 py-0.5"
                     >
                       {tag}
                     </span>
@@ -320,19 +315,19 @@ export const TemplatePicker: React.FC<TemplatePickerProps> = ({
               </div>
 
               {/* Action Button */}
-              <div className="mt-5 pt-3 border-t border-slate-800/60 flex items-center justify-between">
-                <span className="text-xs font-mono text-slate-500">
-                  {isSelected ? 'Loaded in Stage' : 'Click to Apply Transition'}
+              <div className="mt-4 pt-2.5 border-t border-[rgba(240,240,240,0.08)] flex items-center justify-between">
+                <span className="font-space text-[10px] text-[rgba(240,240,240,0.4)]">
+                  {isSelected ? 'ACTIVE // LOADED' : 'CLICK TO LOAD'}
                 </span>
                 <button
                   type="button"
-                  className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
+                  className={`font-space text-[10px] font-bold px-2.5 py-1 uppercase transition-colors ${
                     isSelected
-                      ? 'bg-rose-500 text-white'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                      ? 'bg-[#ff3e00] text-black font-extrabold'
+                      : 'bg-transparent text-[rgba(240,240,240,0.7)] border border-[rgba(240,240,240,0.15)] hover:border-white hover:text-white'
                   }`}
                 >
-                  {isSelected ? 'Current' : 'Select'}
+                  {isSelected ? 'LOADED' : 'SELECT'}
                 </button>
               </div>
             </div>

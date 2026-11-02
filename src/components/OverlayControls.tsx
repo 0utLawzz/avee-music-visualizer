@@ -16,7 +16,9 @@ import {
   Eye,
   EyeOff,
   Palette,
-  Smartphone
+  Smartphone,
+  Zap,
+  Maximize2
 } from 'lucide-react';
 
 interface OverlayControlsProps {
@@ -881,6 +883,325 @@ export const OverlayControls: React.FC<OverlayControlsProps> = ({
                     />
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Running Glow Light over Corner Frame Edges */}
+        <div className="pt-3 border-t border-slate-800/80 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-cyan-400" />
+              Running Corner Edge Glow / Neon Chaser
+            </span>
+            <label className="flex items-center gap-2 text-xs font-semibold text-slate-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={config.runningEdgeLight?.enabled ?? true}
+                onChange={(e) =>
+                  onUpdateConfig((prev) => ({
+                    ...prev,
+                    runningEdgeLight: {
+                      ...(prev.runningEdgeLight || {
+                        enabled: true,
+                        color: prev.bars.primaryColor || '#ff2a55',
+                        secondaryColor: '#ffffff',
+                        speed: 0.85,
+                        thickness: 4.5,
+                        length: 0.18,
+                        glowBlur: 24,
+                        margin: 24,
+                        cornerRadius: 22,
+                        beamCount: 2,
+                        beatBoost: true,
+                        cornerBrackets: true
+                      }),
+                      enabled: e.target.checked
+                    }
+                  }))
+                }
+                className="rounded text-cyan-400 focus:ring-0"
+              />
+              Enable Edge Chaser
+            </label>
+          </div>
+
+          {(config.runningEdgeLight?.enabled ?? true) && (
+            <div className="space-y-3.5 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
+              {/* Color & Beam Count */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-center justify-between bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+                  <span className="text-xs font-medium text-slate-300">Beam Core & Accent Color</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      title="Core Neon Color"
+                      value={config.runningEdgeLight?.color || config.bars.primaryColor}
+                      onChange={(e) =>
+                        onUpdateConfig((prev) => ({
+                          ...prev,
+                          runningEdgeLight: {
+                            ...prev.runningEdgeLight,
+                            color: e.target.value
+                          }
+                        }))
+                      }
+                      className="w-7 h-7 rounded-lg bg-transparent cursor-pointer border-0"
+                    />
+                    <input
+                      type="color"
+                      title="White-Hot Head Flare Color"
+                      value={config.runningEdgeLight?.secondaryColor || '#ffffff'}
+                      onChange={(e) =>
+                        onUpdateConfig((prev) => ({
+                          ...prev,
+                          runningEdgeLight: {
+                            ...prev.runningEdgeLight,
+                            secondaryColor: e.target.value
+                          }
+                        }))
+                      }
+                      className="w-7 h-7 rounded-lg bg-transparent cursor-pointer border-0"
+                    />
+                  </div>
+                </div>
+
+                {/* Beam Count */}
+                <div className="space-y-1">
+                  <span className="text-[11px] font-semibold text-slate-400 block">
+                    Chaser Beam Configuration
+                  </span>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([
+                      { count: 1 as const, label: 'Single' },
+                      { count: 2 as const, label: 'Dual Opposing' },
+                      { count: 4 as const, label: 'Quad Corners' }
+                    ]).map((item) => (
+                      <button
+                        key={item.count}
+                        type="button"
+                        onClick={() =>
+                          onUpdateConfig((prev) => ({
+                            ...prev,
+                            runningEdgeLight: {
+                              ...prev.runningEdgeLight,
+                              beamCount: item.count
+                            }
+                          }))
+                        }
+                        className={`py-1.5 px-2 rounded-lg border text-xs font-semibold transition-all ${
+                          (config.runningEdgeLight?.beamCount ?? 2) === item.count
+                            ? 'bg-cyan-500/20 border-cyan-500 text-white font-bold'
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sliders: Thickness, Speed, Length */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Beam Thickness</span>
+                    <span className="font-mono text-cyan-400 font-bold">
+                      {(config.runningEdgeLight?.thickness ?? 4).toFixed(1)}px
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={2}
+                    max={12}
+                    step={0.5}
+                    value={config.runningEdgeLight?.thickness ?? 4}
+                    onChange={(e) =>
+                      onUpdateConfig((prev) => ({
+                        ...prev,
+                        runningEdgeLight: {
+                          ...prev.runningEdgeLight,
+                          thickness: parseFloat(e.target.value)
+                        }
+                      }))
+                    }
+                    className="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer accent-cyan-400"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>Thin Laser</span>
+                    <span>Thick Neon</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Orbit Speed</span>
+                    <span className="font-mono text-cyan-400 font-bold">
+                      {(config.runningEdgeLight?.speed ?? 0.85).toFixed(2)}x
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0.2}
+                    max={2.5}
+                    step={0.05}
+                    value={config.runningEdgeLight?.speed ?? 0.85}
+                    onChange={(e) =>
+                      onUpdateConfig((prev) => ({
+                        ...prev,
+                        runningEdgeLight: {
+                          ...prev.runningEdgeLight,
+                          speed: parseFloat(e.target.value)
+                        }
+                      }))
+                    }
+                    className="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer accent-cyan-400"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>Slow Cruise</span>
+                    <span>Hyper</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Trail Length</span>
+                    <span className="font-mono text-cyan-400 font-bold">
+                      {((config.runningEdgeLight?.length ?? 0.18) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0.05}
+                    max={0.4}
+                    step={0.02}
+                    value={config.runningEdgeLight?.length ?? 0.18}
+                    onChange={(e) =>
+                      onUpdateConfig((prev) => ({
+                        ...prev,
+                        runningEdgeLight: {
+                          ...prev.runningEdgeLight,
+                          length: parseFloat(e.target.value)
+                        }
+                      }))
+                    }
+                    className="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer accent-cyan-400"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>Comet Dot</span>
+                    <span>Long Ribbon</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sliders: Corner Radius & Frame Inset Margin */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Corner Roundness</span>
+                    <span className="font-mono text-cyan-400 font-bold">
+                      {config.runningEdgeLight?.cornerRadius ?? 22}px
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={50}
+                    step={2}
+                    value={config.runningEdgeLight?.cornerRadius ?? 22}
+                    onChange={(e) =>
+                      onUpdateConfig((prev) => ({
+                        ...prev,
+                        runningEdgeLight: {
+                          ...prev.runningEdgeLight,
+                          cornerRadius: parseInt(e.target.value)
+                        }
+                      }))
+                    }
+                    className="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer accent-cyan-400"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>Sharp Corners</span>
+                    <span>Curvy Round</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Frame Inset Margin</span>
+                    <span className="font-mono text-cyan-400 font-bold">
+                      {config.runningEdgeLight?.margin ?? 24}px
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={10}
+                    max={60}
+                    step={2}
+                    value={config.runningEdgeLight?.margin ?? 24}
+                    onChange={(e) =>
+                      onUpdateConfig((prev) => ({
+                        ...prev,
+                        runningEdgeLight: {
+                          ...prev.runningEdgeLight,
+                          margin: parseInt(e.target.value)
+                        }
+                      }))
+                    }
+                    className="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer accent-cyan-400"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>Screen Outer</span>
+                    <span>Inner Frame</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Toggles: Beat Reactive Surge & Corner Brackets */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-800/60">
+                <label className="flex items-center gap-2.5 p-2 bg-slate-900/60 border border-slate-800/80 rounded-xl cursor-pointer hover:bg-slate-800/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={config.runningEdgeLight?.beatBoost ?? true}
+                    onChange={(e) =>
+                      onUpdateConfig((prev) => ({
+                        ...prev,
+                        runningEdgeLight: {
+                          ...prev.runningEdgeLight,
+                          beatBoost: e.target.checked
+                        }
+                      }))
+                    }
+                    className="rounded text-cyan-400 focus:ring-0"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-white block">Beat Reactive Surge</span>
+                    <span className="text-[10px] text-slate-400 block">Speeds up & flashes bloom on kicks</span>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-2.5 p-2 bg-slate-900/60 border border-slate-800/80 rounded-xl cursor-pointer hover:bg-slate-800/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={config.runningEdgeLight?.cornerBrackets ?? true}
+                    onChange={(e) =>
+                      onUpdateConfig((prev) => ({
+                        ...prev,
+                        runningEdgeLight: {
+                          ...prev.runningEdgeLight,
+                          cornerBrackets: e.target.checked
+                        }
+                      }))
+                    }
+                    className="rounded text-cyan-400 focus:ring-0"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-white block">Avee Corner Brackets</span>
+                    <span className="text-[10px] text-slate-400 block">Corner ticks flare when beam sweeps past</span>
+                  </div>
+                </label>
               </div>
             </div>
           )}

@@ -93,6 +93,21 @@ export type TransitionEffect =
   | 'radial_iris'
   | 'glitch_cut';
 
+export interface RunningEdgeLightConfig {
+  enabled: boolean;
+  color: string;
+  secondaryColor?: string;
+  speed: number;           // 0.2 to 3.0
+  thickness: number;       // 2 to 14 px
+  length: number;          // 0.04 to 0.45 perimeter fraction
+  glowBlur: number;        // 4 to 45 px
+  margin: number;          // 10 to 80 px
+  cornerRadius: number;    // 0 to 60 px
+  beamCount: 1 | 2 | 4;    // single, dual opposing, or quad corner chasers
+  beatBoost: boolean;      // speed surge and bloom flash on beat kicks
+  cornerBrackets: boolean; // Avee Player corner accents that ignite when passed
+}
+
 export interface VisualizerConfig {
   template: TemplateId;
   aspectRatio: AspectRatio;
@@ -139,7 +154,11 @@ export interface VisualizerConfig {
     frequencyCutoff: number;    // lowpass filter cutoff
     nudgeMs?: number;            // visual nudge forward/backward (-500 to +500 ms)
     manualBeats?: BeatPoint[];   // manual beat points / cue markers
+    movementSmoothing?: number;  // smooth motion fluidity (0.1 snappy to 0.95 liquid)
   };
+
+  // Running Glow Light Beam over Frame / Corner Edges
+  runningEdgeLight: RunningEdgeLightConfig;
 
   // Circular / Spectrum Bars
   bars: {
@@ -234,3 +253,31 @@ export interface PresetTrack {
   coverImage?: string;
   initialBeats?: number[]; // pre-calculated beat markers
 }
+
+export interface ExportFormatPreset {
+  id: string;
+  name: string;
+  description: string;
+  platform: 'tiktok_reels' | 'youtube_hd' | 'instagram_square' | 'portrait_feed' | 'custom';
+  aspectRatio: AspectRatio;
+  fps: 24 | 30 | 60;
+  bitrateBps: number;
+  template: TemplateId;
+  isSavedCustom?: boolean;
+}
+
+export interface AudioClipSegment {
+  id: string;
+  name: string;
+  startTime: number;
+  endTime: number;
+  aspectRatio: AspectRatio;
+  template: TemplateId;
+  fps: 24 | 30 | 60;
+  bitrateBps: number;
+  status: 'idle' | 'rendering' | 'completed' | 'error';
+  blobUrl?: string;
+  fileSizeMb?: number;
+  createdAt: number;
+}
+

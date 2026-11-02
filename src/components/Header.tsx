@@ -1,119 +1,95 @@
 import React from 'react';
-import { Sparkles, Camera, Film, Layers, Sliders, Radio, Music2, Github, BookOpen } from 'lucide-react';
+import { Sparkles, Camera, Github, Radio } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'templates' | 'visuals' | 'sync' | 'overlays' | 'audio';
-  setActiveTab: (tab: 'templates' | 'visuals' | 'sync' | 'overlays' | 'audio') => void;
   onOpenExport: () => void;
   onCaptureSnapshot: () => void;
   onOpenRepoMeta: () => void;
+  aspectRatio?: string;
+  resolution?: string;
+  isPlaying?: boolean;
+  currentView?: 'studio' | 'clipper';
+  onSwitchView?: (view: 'studio' | 'clipper') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  activeTab,
-  setActiveTab,
   onOpenExport,
   onCaptureSnapshot,
-  onOpenRepoMeta
+  onOpenRepoMeta,
+  aspectRatio = '16:9',
+  resolution = '720P',
+  isPlaying = false,
+  currentView = 'studio',
+  onSwitchView
 }) => {
   return (
-    <header className="h-16 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md px-6 flex items-center justify-between gap-8 z-30 shrink-0">
-      {/* Zone 1: Wordmark Brand */}
-      <div className="flex items-center gap-3 shrink-0">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center shadow-lg shadow-rose-500/20">
-          <Radio className="w-5 h-5 text-white animate-pulse" />
+    <header className="h-16 border-b border-[rgba(240,240,240,0.12)] bg-[#0b0c0d]/80 backdrop-blur-md px-6 flex items-center justify-between gap-4 z-30 shrink-0">
+      {/* Technical Status / Viewport Tag & View Mode Switcher */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-[#00ff66] animate-pulse' : 'bg-[#ff3e00]'}`} />
+          <span className="font-space text-[10px] tracking-wider text-[rgba(240,240,240,0.5)]">
+            {isPlaying ? 'LIVE_STREAM_OK' : 'ENGINE_STANDBY'}
+          </span>
         </div>
-        <span className="text-lg font-extrabold tracking-tight text-white whitespace-nowrap">
-          PulseCraft <span className="text-rose-500 font-medium">Studio</span>
-        </span>
+
+        <span className="text-[rgba(240,240,240,0.2)]">|</span>
+
+        {/* View Mode Switcher Tabs */}
+        {onSwitchView && (
+          <div className="flex items-center bg-black/60 border border-[rgba(240,240,240,0.15)] p-0.5">
+            <button
+              onClick={() => onSwitchView('studio')}
+              className={`font-space text-[11px] font-bold px-3 py-1 transition-all ${
+                currentView === 'studio'
+                  ? 'bg-[#ff3e00] text-black shadow-sm'
+                  : 'text-[rgba(240,240,240,0.6)] hover:text-white'
+              }`}
+            >
+              ◈ LIVE STUDIO
+            </button>
+            <button
+              onClick={() => onSwitchView('clipper')}
+              className={`font-space text-[11px] font-bold px-3 py-1 transition-all flex items-center gap-1.5 ${
+                currentView === 'clipper'
+                  ? 'bg-[#ff3e00] text-black shadow-sm'
+                  : 'text-[rgba(240,240,240,0.6)] hover:text-white'
+              }`}
+            >
+              <span>✄ 60M+ CLIPPER</span>
+              <span className={`text-[8px] px-1 font-mono uppercase ${
+                currentView === 'clipper' ? 'bg-black text-[#ff3e00]' : 'bg-[#ff3e00]/20 text-[#ff3e00]'
+              }`}>
+                PARTS
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Zone 2: Navigation Links / Studio Tabs */}
-      <nav className="hidden md:flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800/80">
-        <button
-          onClick={() => setActiveTab('templates')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
-            activeTab === 'templates'
-              ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/30'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          Templates
-        </button>
-
-        <button
-          onClick={() => setActiveTab('visuals')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
-            activeTab === 'visuals'
-              ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/30'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-          }`}
-        >
-          <Sliders className="w-3.5 h-3.5" />
-          Visualizer FX
-        </button>
-
-        <button
-          onClick={() => setActiveTab('sync')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
-            activeTab === 'sync'
-              ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/30'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-          }`}
-        >
-          <Radio className="w-3.5 h-3.5" />
-          Beat & Sync
-        </button>
-
-        <button
-          onClick={() => setActiveTab('overlays')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
-            activeTab === 'overlays'
-              ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/30'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-          }`}
-        >
-          <Film className="w-3.5 h-3.5" />
-          Overlays & VHS
-        </button>
-
-        <button
-          onClick={() => setActiveTab('audio')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
-            activeTab === 'audio'
-              ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/30'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-          }`}
-        >
-          <Music2 className="w-3.5 h-3.5" />
-          Audio & Media
-        </button>
-      </nav>
-
-      {/* Zone 3: Primary Action & Quick Export */}
-      <div className="flex items-center gap-2 shrink-0">
+      {/* Technical Action Buttons */}
+      <div className="flex items-center gap-2.5">
         <button
           onClick={onOpenRepoMeta}
-          title="Repository Metadata (Name, Description, Topics, Technologies)"
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg transition-colors whitespace-nowrap shrink-0"
+          title="Repository Architecture & Metadata (Space Mono Spec)"
+          className="btn-tech text-[rgba(240,240,240,0.85)] hover:text-white"
         >
-          <Github className="w-3.5 h-3.5 text-rose-400" />
-          <span className="hidden sm:inline">Repo Meta</span>
+          <Github className="w-3.5 h-3.5" />
+          <span>Repo Meta</span>
         </button>
 
         <button
           onClick={onCaptureSnapshot}
           title="Instant 4K/HD Cover Art Snapshot (PNG)"
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg transition-colors whitespace-nowrap shrink-0"
+          className="btn-tech text-[rgba(240,240,240,0.85)] hover:text-white"
         >
-          <Camera className="w-3.5 h-3.5 text-slate-400" />
-          <span className="hidden sm:inline">Cover Art</span>
+          <Camera className="w-3.5 h-3.5" />
+          <span>Cover Art</span>
         </button>
 
         <button
           onClick={onOpenExport}
-          className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 rounded-lg shadow-lg shadow-rose-500/25 transition-all transform active:scale-95 whitespace-nowrap shrink-0"
+          className="btn-tech btn-tech-primary shadow-sm"
         >
           <Sparkles className="w-3.5 h-3.5" />
           <span>Export Video</span>

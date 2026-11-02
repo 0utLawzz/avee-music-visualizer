@@ -216,6 +216,20 @@ export const TEMPLATE_CONFIGS: Record<string, DeepPartial<VisualizerConfig>> = {
       smoothing: 0.8,
       frequencyCutoff: 170
     },
+    runningEdgeLight: {
+      enabled: true,
+      color: '#2dd4bf',
+      secondaryColor: '#ffffff',
+      speed: 0.9,
+      thickness: 3.5,
+      length: 0.16,
+      glowBlur: 24,
+      margin: 18,
+      cornerRadius: 14,
+      beamCount: 2,
+      beatBoost: true,
+      cornerBrackets: true
+    },
     background: {
       type: 'gradient',
       mediaUrl: '',
@@ -334,6 +348,20 @@ export const TEMPLATE_CONFIGS: Record<string, DeepPartial<VisualizerConfig>> = {
       smoothing: 0.84,
       frequencyCutoff: 160
     },
+    runningEdgeLight: {
+      enabled: true,
+      color: '#38bdf8',
+      secondaryColor: '#ffffff',
+      speed: 1.0,
+      thickness: 4.0,
+      length: 0.22,
+      glowBlur: 28,
+      margin: 32,
+      cornerRadius: 18,
+      beamCount: 2,
+      beatBoost: true,
+      cornerBrackets: true
+    },
     background: {
       type: 'gradient',
       mediaUrl: '',
@@ -393,6 +421,20 @@ export const TEMPLATE_CONFIGS: Record<string, DeepPartial<VisualizerConfig>> = {
       smoothing: 0.79,
       frequencyCutoff: 150
     },
+    runningEdgeLight: {
+      enabled: true,
+      color: '#0ea5e9',
+      secondaryColor: '#6366f1',
+      speed: 1.1,
+      thickness: 4.5,
+      length: 0.25,
+      glowBlur: 30,
+      margin: 26,
+      cornerRadius: 20,
+      beamCount: 2,
+      beatBoost: true,
+      cornerBrackets: true
+    },
     background: {
       type: 'gradient',
       mediaUrl: '',
@@ -451,6 +493,20 @@ export const TEMPLATE_CONFIGS: Record<string, DeepPartial<VisualizerConfig>> = {
       bassShakeStrength: 1.0,
       smoothing: 0.74,
       frequencyCutoff: 120
+    },
+    runningEdgeLight: {
+      enabled: true,
+      color: '#ef4444',
+      secondaryColor: '#f97316',
+      speed: 1.25,
+      thickness: 5.0,
+      length: 0.22,
+      glowBlur: 32,
+      margin: 20,
+      cornerRadius: 24,
+      beamCount: 4,
+      beatBoost: true,
+      cornerBrackets: true
     },
     background: {
       type: 'gradient',
@@ -758,7 +814,23 @@ export const DEFAULT_CONFIG: VisualizerConfig = {
       { id: 'b_18', time: 8.30, intensity: 1.0, type: 'manual' },
       { id: 'b_19', time: 8.76, intensity: 1.0, type: 'manual' },
       { id: 'b_20', time: 9.23, intensity: 1.0, type: 'manual' }
-    ]
+    ],
+    movementSmoothing: 0.78
+  },
+
+  runningEdgeLight: {
+    enabled: true,
+    color: '#ff2a55',
+    secondaryColor: '#ffffff',
+    speed: 0.85,
+    thickness: 4.5,
+    length: 0.18,
+    glowBlur: 24,
+    margin: 24,
+    cornerRadius: 22,
+    beamCount: 2,
+    beatBoost: true,
+    cornerBrackets: true
   },
 
   bars: {
