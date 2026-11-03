@@ -281,3 +281,47 @@ export interface AudioClipSegment {
   createdAt: number;
 }
 
+export interface BatchQueueItem {
+  id: string;
+  clipId: string;
+  name: string;
+  startTime: number;
+  endTime: number;
+  aspectRatio: AspectRatio;
+  template: TemplateId;
+  fps: 24 | 30 | 60;
+  bitrateBps: number;
+  status: 'pending' | 'rendering' | 'completed' | 'failed';
+  progressPercent: number;
+  blobUrl?: string;
+  blobSizeMb?: number;
+  filename?: string;
+  error?: string;
+  queuedAt: number;
+}
+
+export interface ExportHistoryItem {
+  id: string;
+  clipName: string;
+  filename: string;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  aspectRatio: AspectRatio;
+  template: TemplateId;
+  fps: 24 | 30 | 60;
+  blobUrl: string;
+  blobSizeMb: number;
+  exportedAt: number;
+}
+
+export interface SuggestedHitPoint {
+  id: string;
+  time: number;
+  label: string;
+  intensity: number;
+  type: 'drop' | 'kick' | 'transition';
+  confidence: number;
+}
+
+
