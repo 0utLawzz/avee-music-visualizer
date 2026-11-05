@@ -475,6 +475,74 @@ export const LongAudioClipperPage: React.FC<LongAudioClipperPageProps> = ({
     );
   };
 
+  // Load User's Dialekt Radio 351 Track
+  const handleLoadDialektSample = () => {
+    onUpdateConfig((prev) => ({
+      ...prev,
+      audio: {
+        ...prev.audio,
+        trackTitle: 'Dialekt Radio 351 (All What You Need)',
+        artistName: 'Sultan + Shepard / Dialekt',
+        bpm: 124,
+        duration: 237,
+        sourceUrl: '/assets/aistudio/DIALEKT_RADIO__351__mp3cut.net__776115a6.mp3'
+      }
+    }));
+
+    if (audioMediaRef.current) {
+      const audio = audioMediaRef.current;
+      const target = '/assets/aistudio/DIALEKT_RADIO__351__mp3cut.net__776115a6.mp3';
+      if (!audio.src.endsWith(target) && audio.src !== target) {
+        audio.src = target;
+        audio.load();
+      }
+      audio.currentTime = 0;
+      audioEngine.attachMediaElement(audio);
+    }
+
+    setClips([
+      {
+        id: 'clip_dialekt_1',
+        name: 'Part 01: Melodic House Intro (0:00 - 0:30)',
+        startTime: 0,
+        endTime: 30,
+        aspectRatio: '9:16',
+        template: 'avee_classic',
+        fps: 60,
+        bitrateBps: 12000000,
+        status: 'idle',
+        createdAt: Date.now()
+      },
+      {
+        id: 'clip_dialekt_2',
+        name: 'Part 02: Progressive Bass Drop (1:02 - 1:32)',
+        startTime: 62,
+        endTime: 92,
+        aspectRatio: '9:16',
+        template: 'phonk_crown',
+        fps: 60,
+        bitrateBps: 12000000,
+        status: 'idle',
+        createdAt: Date.now() + 1
+      },
+      {
+        id: 'clip_dialekt_3',
+        name: 'Part 03: Peak Energy Climax (2:15 - 2:45)',
+        startTime: 135,
+        endTime: 165,
+        aspectRatio: '16:9',
+        template: 'cyber_horizon',
+        fps: 60,
+        bitrateBps: 14000000,
+        status: 'idle',
+        createdAt: Date.now() + 2
+      }
+    ]);
+
+    setMarkIn(0);
+    setMarkOut(30);
+  };
+
   // Load 72-Minute DJ Session Demo
   const handleLoadDemoLongAudio = () => {
     onUpdateConfig((prev) => ({
@@ -816,7 +884,7 @@ export const LongAudioClipperPage: React.FC<LongAudioClipperPageProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             type="file"
             ref={fileInputRef}
@@ -830,23 +898,32 @@ export const LongAudioClipperPage: React.FC<LongAudioClipperPageProps> = ({
           />
 
           <button
+            onClick={handleLoadDialektSample}
+            className="font-space text-xs font-bold bg-[#ff3e00] hover:bg-[#ff5722] text-black px-3 py-1.5 transition-all flex items-center gap-1.5 shadow-sm"
+            title="Load your sample track Dialekt Radio 351"
+          >
+            <span>▶</span>
+            <span>SAMPLE: DIALEKT 351</span>
+          </button>
+
+          <button
             onClick={() => fileInputRef.current?.click()}
-            className="font-space text-xs font-bold bg-[#141517] hover:bg-white/10 text-white border border-[rgba(240,240,240,0.2)] hover:border-[#ff3e00] px-3.5 py-1.5 transition-all flex items-center gap-2 shadow-sm"
+            className="font-space text-xs font-bold bg-[#141517] hover:bg-white/10 text-white border border-[rgba(240,240,240,0.2)] hover:border-[#ff3e00] px-3 py-1.5 transition-all flex items-center gap-1.5 shadow-sm"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="17 8 12 3 7 8"></polyline>
               <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-            <span>IMPORT AUDIO (60M+)</span>
+            <span>IMPORT AUDIO</span>
           </button>
 
           <button
             onClick={handleLoadDemoLongAudio}
-            className="font-space text-xs font-bold bg-[rgba(255,62,0,0.1)] hover:bg-[#ff3e00] hover:text-black text-[#ff3e00] border border-[#ff3e00]/40 px-3.5 py-1.5 transition-all"
+            className="font-space text-xs font-bold bg-[rgba(255,62,0,0.1)] hover:bg-[#ff3e00] hover:text-black text-[#ff3e00] border border-[#ff3e00]/40 px-3 py-1.5 transition-all"
             title="Load a 72-minute live festival set demo to test scrubbing, hits, and clipping"
           >
-            <span>LOAD 72-MIN DEMO SET</span>
+            <span>72-MIN SET DEMO</span>
           </button>
         </div>
       </header>

@@ -2,6 +2,17 @@ import { VisualizerConfig, PresetTrack, DeepPartial } from '../types/visualizer'
 
 export const PRESET_TRACKS: PresetTrack[] = [
   {
+    id: 'dialekt_radio_351',
+    name: 'Dialekt Radio 351 (All What You Need)',
+    artist: 'Sultan + Shepard / Dialekt',
+    genre: 'Melodic House / Progressive',
+    bpm: 124,
+    duration: 237,
+    url: '/assets/aistudio/DIALEKT_RADIO__351__mp3cut.net__776115a6.mp3',
+    videoUrl: '/assets/aistudio/My_Feet_Are_on_the_Ground_exported_0_cadb4f90.mp4',
+    coverImage: ''
+  },
+  {
     id: 'user_uploaded_ref',
     name: 'My Feet Are on the Ground',
     artist: 'its2kasooo',
@@ -755,8 +766,8 @@ export const DEFAULT_CONFIG: VisualizerConfig = {
   template: 'avee_classic',
   aspectRatio: '16:9',
   framingMode: 'fit_blur',
-  fps: 60,
-  exportQuality: '1080p',
+  fps: 30,
+  exportQuality: '720p',
 
   transitions: {
     enabled: true,
@@ -765,19 +776,19 @@ export const DEFAULT_CONFIG: VisualizerConfig = {
   },
 
   preview: {
-    resolution: '720p', // Default to balanced 720p to prevent PC hang/lag!
+    resolution: '480p', // Low-load 480p default to prevent PC/mobile lag and hanging!
     windowSize: 'full',
-    fpsCap: 60,
+    fpsCap: 30, // 30 FPS default preview cap reduces GPU canvas load
     reduceGlowOnLowRes: true
   },
 
   audio: {
-    trackTitle: 'My Feet Are on the Ground',
-    artistName: 'its2kasooo',
-    albumOrSubtitle: 'Avee Player / OutLawz Remix',
-    sourceUrl: '/assets/aistudio/My_Feet_Are_on_the_Ground_exported_0_cadb4f90.mp4',
-    duration: 15,
-    bpm: 130,
+    trackTitle: 'Dialekt Radio 351 (All What You Need)',
+    artistName: 'Sultan + Shepard / Dialekt',
+    albumOrSubtitle: 'Melodic Progressive House Cut',
+    sourceUrl: '/assets/aistudio/DIALEKT_RADIO__351__mp3cut.net__776115a6.mp3',
+    duration: 237,
+    bpm: 124,
     syncOffsetMs: 0
   },
 
@@ -794,26 +805,16 @@ export const DEFAULT_CONFIG: VisualizerConfig = {
     nudgeMs: 0,
     manualBeats: [
       { id: 'b_0', time: 0.0, intensity: 1.0, type: 'manual' },
-      { id: 'b_1', time: 0.46, intensity: 0.8, type: 'manual' },
-      { id: 'b_2', time: 0.92, intensity: 1.0, type: 'manual' },
-      { id: 'b_3', time: 1.38, intensity: 0.8, type: 'manual' },
-      { id: 'b_4', time: 1.84, intensity: 1.0, type: 'manual' },
-      { id: 'b_5', time: 2.30, intensity: 0.8, type: 'manual' },
-      { id: 'b_6', time: 2.76, intensity: 1.0, type: 'manual' },
-      { id: 'b_7', time: 3.23, intensity: 0.8, type: 'manual' },
-      { id: 'b_8', time: 3.69, intensity: 1.0, type: 'manual' },
-      { id: 'b_9', time: 4.15, intensity: 0.8, type: 'manual' },
-      { id: 'b_10', time: 4.61, intensity: 1.0, type: 'manual' },
-      { id: 'b_11', time: 5.07, intensity: 0.8, type: 'manual' },
-      { id: 'b_12', time: 5.53, intensity: 1.0, type: 'manual' },
-      { id: 'b_13', time: 6.00, intensity: 1.0, type: 'manual' },
-      { id: 'b_14', time: 6.46, intensity: 1.0, type: 'manual' },
-      { id: 'b_15', time: 6.92, intensity: 1.0, type: 'manual' },
-      { id: 'b_16', time: 7.38, intensity: 1.0, type: 'manual' },
-      { id: 'b_17', time: 7.84, intensity: 1.0, type: 'manual' },
-      { id: 'b_18', time: 8.30, intensity: 1.0, type: 'manual' },
-      { id: 'b_19', time: 8.76, intensity: 1.0, type: 'manual' },
-      { id: 'b_20', time: 9.23, intensity: 1.0, type: 'manual' }
+      { id: 'b_1', time: 0.48, intensity: 0.8, type: 'manual' },
+      { id: 'b_2', time: 0.96, intensity: 1.0, type: 'manual' },
+      { id: 'b_3', time: 1.45, intensity: 0.8, type: 'manual' },
+      { id: 'b_4', time: 1.93, intensity: 1.0, type: 'manual' },
+      { id: 'b_5', time: 2.41, intensity: 0.8, type: 'manual' },
+      { id: 'b_6', time: 2.90, intensity: 1.0, type: 'manual' },
+      { id: 'b_7', time: 3.38, intensity: 0.8, type: 'manual' },
+      { id: 'b_8', time: 3.87, intensity: 1.0, type: 'manual' },
+      { id: 'b_9', time: 4.35, intensity: 0.8, type: 'manual' },
+      { id: 'b_10', time: 4.83, intensity: 1.0, type: 'manual' }
     ],
     movementSmoothing: 0.78
   },
@@ -823,22 +824,22 @@ export const DEFAULT_CONFIG: VisualizerConfig = {
     color: '#ff2a55',
     secondaryColor: '#ffffff',
     speed: 0.85,
-    thickness: 4.5,
+    thickness: 4.0,
     length: 0.18,
-    glowBlur: 24,
-    margin: 24,
-    cornerRadius: 22,
+    glowBlur: 16,
+    margin: 20,
+    cornerRadius: 18,
     beamCount: 2,
     beatBoost: true,
     cornerBrackets: true
   },
 
   bars: {
-    barCount: 120,
-    circleRadius: 130,
+    barCount: 96,
+    circleRadius: 120,
     barWidth: 3.5,
-    barMaxHeight: 180,
-    glowStrength: 24,
+    barMaxHeight: 160,
+    glowStrength: 14,
     primaryColor: '#ff2a55',
     secondaryColor: '#ffffff',
     accentColor: '#38bdf8',
@@ -851,13 +852,13 @@ export const DEFAULT_CONFIG: VisualizerConfig = {
   centerBadge: {
     enabled: true,
     imageUrl: '',
-    badgeText: 'OUTLAWZ',
+    badgeText: 'DIALEKT',
     shape: 'circle',
-    size: 90,
-    borderWidth: 3,
+    size: 85,
+    borderWidth: 2.5,
     borderColor: '#ff2a55',
     glowColor: '#ff2a55',
-    pulseIntensity: 1.25,
+    pulseIntensity: 1.2,
     spinSpeed: 0.2
   },
 
@@ -873,7 +874,7 @@ export const DEFAULT_CONFIG: VisualizerConfig = {
 
   overlays: {
     particles: true,
-    particleCount: 110,
+    particleCount: 45,
     particleColor: '#ff3b5c',
     particleBurstOnKick: true,
     vhsEffect: true,

@@ -25,10 +25,13 @@ export default function App() {
   // Top-level view mode: Live Canvas Studio vs 60M+ Long Audio Clipper
   const [currentView, setCurrentView] = useState<'studio' | 'clipper'>('studio');
 
+  // Mobile drawer state (slide-over on screens < lg)
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
+
   // Studio navigation tab
   const [activeTab, setActiveTab] = useState<'templates' | 'visuals' | 'sync' | 'overlays' | 'audio'>('templates');
 
-  // Main visualizer state
+  // Main visualizer state (480p default low-load)
   const [config, setConfig] = useState<VisualizerConfig>(DEFAULT_CONFIG);
 
   // Metadata / Documentation modal state
@@ -37,8 +40,8 @@ export default function App() {
   // Playback state
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playbackTime, setPlaybackTime] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(15);
-  const [currentTrackId, setCurrentTrackId] = useState<string>('user_uploaded_ref');
+  const [duration, setDuration] = useState<number>(237);
+  const [currentTrackId, setCurrentTrackId] = useState<string>('dialekt_radio_351');
 
   // Beat & Audio analysis buffers
   const [beatState, setBeatState] = useState<BeatDetectionState>({
@@ -76,25 +79,45 @@ export default function App() {
   const renderer = useMemo(() => new VisualizerRenderer(), []);
   const videoExporter = useMemo(() => new VideoExporter(), []);
 
-  // Initialize reference video background
+  // Initialize reference video background and sample Dialekt Radio audio
   useEffect(() => {
+    let isCancelled = false;
+
+    // 1. Background Visual Loop (muted video)
     const video = document.createElement('video');
     video.src = '/assets/aistudio/My_Feet_Are_on_the_Ground_exported_0_cadb4f90.mp4';
-    video.crossOrigin = 'anonymous';
     video.loop = true;
-    video.muted = false;
+    video.muted = true;
     video.playsInline = true;
+    videoMediaRef.current = video;
+    setBgMedia(video);
 
     video.onloadedmetadata = () => {
-      setDuration(video.duration || 15);
-      setBgMedia(video);
-      videoMediaRef.current = video;
-      audioEngine.attachMediaElement(video);
+      if (!isCancelled) {
+        setBgMedia(video);
+      }
     };
 
+    // 2. Default Sample Audio Track (Dialekt Radio 351)
+    const audio = new Audio('/assets/aistudio/DIALEKT_RADIO__351__mp3cut.net__776115a6.mp3');
+    audio.loop = true;
+    audio.preload = 'auto';
+    audioMediaRef.current = audio;
+
+    const handleLoadedMetadata = () => {
+      if (!isCancelled) {
+        setDuration(audio.duration || 237);
+        audioEngine.attachMediaElement(audio);
+      }
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+
     return () => {
+      isCancelled = true;
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.pause();
-      video.src = '';
+      audio.pause();
     };
   }, [audioEngine]);
 
@@ -120,10 +143,10 @@ export default function App() {
       setBeatState(newBeat);
 
       // Track playback time
-      if (videoMediaRef.current && !videoMediaRef.current.paused) {
-        setPlaybackTime(videoMediaRef.current.currentTime);
-      } else if (audioMediaRef.current && !audioMediaRef.current.paused) {
+      if (audioMediaRef.current && !audioMediaRef.current.paused) {
         setPlaybackTime(audioMediaRef.current.currentTime);
+      } else if (videoMediaRef.current && !videoMediaRef.current.paused) {
+        setPlaybackTime(videoMediaRef.current.currentTime);
       } else if (currentTrackId.startsWith('procedural_') && isPlaying) {
         setPlaybackTime(audioEngine.getProceduralCurrentTime());
       }
@@ -150,31 +173,60 @@ export default function App() {
       return;
     }
 
-    const media = videoMediaRef.current || audioMediaRef.current;
-    if (!media) return;
-
     if (isPlaying) {
-      media.pause();
+      if (audioMediaRef.current) audioMediaRef.current.pause();
+      if (videoMediaRef.current) videoMediaRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioEngine.attachMediaElement(media);
-      try {
-        await media.play();
-        setIsPlaying(true);
-      } catch {
-        // Fallback or user gesture
+      if ((currentTrackId === 'user_uploaded_ref' || (config.audio.sourceUrl && config.audio.sourceUrl.endsWith('.mp4'))) && videoMediaRef.current) {
+        audioEngine.attachMediaElement(videoMediaRef.current);
+        videoMediaRef.current.muted = false;
+        try {
+          await videoMediaRef.current.play();
+          setIsPlaying(true);
+        } catch {
+          // Playback interrupted
+        }
+      } else if (audioMediaRef.current) {
+        const audio = audioMediaRef.current;
+        if (!audio.src || audio.src === '' || audio.src === window.location.href) {
+          audio.src = config.audio.sourceUrl || '/assets/aistudio/DIALEKT_RADIO__351__mp3cut.net__776115a6.mp3';
+          audio.load();
+        }
+        audioEngine.attachMediaElement(audio);
+        audio.muted = false;
+        try {
+          await audio.play();
+          if (videoMediaRef.current) {
+            videoMediaRef.current.muted = true;
+            videoMediaRef.current.play().catch(() => {});
+          }
+          setIsPlaying(true);
+        } catch {
+          // Playback interrupted
+        }
+      } else if (videoMediaRef.current) {
+        audioEngine.attachMediaElement(videoMediaRef.current);
+        videoMediaRef.current.muted = false;
+        try {
+          await videoMediaRef.current.play();
+          setIsPlaying(true);
+        } catch {
+          // Playback interrupted
+        }
       }
     }
-  }, [audioEngine, currentTrackId, isPlaying]);
+  }, [audioEngine, currentTrackId, isPlaying, config.audio.sourceUrl]);
 
   // Seek
   const handleSeek = (time: number) => {
     setPlaybackTime(time);
-    if (videoMediaRef.current) {
-      videoMediaRef.current.currentTime = time;
-    }
     if (audioMediaRef.current) {
       audioMediaRef.current.currentTime = time;
+    }
+    if (videoMediaRef.current) {
+      const vDur = videoMediaRef.current.duration || 15;
+      videoMediaRef.current.currentTime = time % vDur;
     }
   };
 
@@ -238,11 +290,52 @@ export default function App() {
     if (track.url.startsWith('procedural_')) {
       await audioEngine.playProcedural(track.url, true);
       setIsPlaying(true);
-    } else if (track.id === 'user_uploaded_ref' && videoMediaRef.current) {
-      audioEngine.attachMediaElement(videoMediaRef.current);
-      videoMediaRef.current.currentTime = 0;
-      await videoMediaRef.current.play();
-      setIsPlaying(true);
+    } else if (track.id === 'user_uploaded_ref' || (track.videoUrl && track.url.endsWith('.mp4'))) {
+      if (!videoMediaRef.current) {
+        const vid = document.createElement('video');
+        vid.src = track.videoUrl || track.url;
+        vid.loop = true;
+        vid.playsInline = true;
+        videoMediaRef.current = vid;
+        setBgMedia(vid);
+      }
+      const vid = videoMediaRef.current;
+      vid.muted = false;
+      vid.currentTime = 0;
+      audioEngine.attachMediaElement(vid);
+      try {
+        await vid.play();
+        setIsPlaying(true);
+      } catch (err) {
+        console.warn('Video playback deferred until user interaction', err);
+      }
+    } else {
+      // Audio track (e.g. dialekt_radio_351)
+      if (!audioMediaRef.current) {
+        audioMediaRef.current = new Audio();
+        audioMediaRef.current.loop = true;
+      }
+      const audio = audioMediaRef.current;
+      const currentSrc = audio.src || '';
+
+      if (!currentSrc.endsWith(track.url) && currentSrc !== track.url) {
+        audio.src = track.url;
+        audio.load();
+      }
+      audio.currentTime = 0;
+      audio.muted = false;
+      audioEngine.attachMediaElement(audio);
+
+      try {
+        await audio.play();
+        if (videoMediaRef.current) {
+          videoMediaRef.current.muted = true;
+          videoMediaRef.current.play().catch(() => {});
+        }
+        setIsPlaying(true);
+      } catch (err) {
+        console.warn('Playback deferred until user interaction', err);
+      }
     }
   };
 
@@ -251,7 +344,6 @@ export default function App() {
     const url = URL.createObjectURL(file);
     const audio = new Audio(url);
     audio.loop = true;
-    audio.crossOrigin = 'anonymous';
 
     audio.onloadedmetadata = async () => {
       setDuration(audio.duration || 30);
@@ -636,168 +728,187 @@ export default function App() {
 
         {/* 2. Sidebar Drawer (aside) - shown in studio view */}
         {currentView === 'studio' && (
-          <aside className="border-r border-[rgba(240,240,240,0.12)] bg-[#0b0c0d] flex flex-col h-full overflow-hidden shrink-0 z-20">
-          <div className="p-5 px-6 border-b border-[rgba(240,240,240,0.12)]">
-            <span className="font-space text-[10px] uppercase tracking-[0.15em] text-[#ff3e00] block mb-1">
-              Module.01
-            </span>
-            <div className="font-syne font-extrabold text-xl tracking-tight text-[#f0f0f0]">
-              PULSE CRAFT
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto flex flex-col">
-            {/* Vertical Navigation Section */}
-            <div className="p-5 px-6 border-b border-[rgba(240,240,240,0.12)]">
-              <span className="font-space text-[10px] uppercase tracking-[0.15em] text-[#ff3e00] block mb-3">
-                Navigation
+          <aside
+            className={`bg-[#0b0c0d] flex flex-col h-full overflow-hidden shrink-0 z-40 transition-all ${
+              isMobileDrawerOpen
+                ? 'fixed inset-0 top-14 lg:static lg:top-0 w-full lg:w-[340px] border-r border-[rgba(240,240,240,0.12)]'
+                : 'hidden lg:flex lg:w-[340px] border-r border-[rgba(240,240,240,0.12)]'
+            }`}
+          >
+            {/* Mobile close bar */}
+            <div className="lg:hidden flex items-center justify-between p-3.5 bg-[#141517] border-b border-[rgba(240,240,240,0.12)] shrink-0">
+              <span className="font-space text-xs font-bold text-[#ff3e00]">
+                STUDIO CONTROLS & FX
               </span>
-              <nav className="flex flex-col gap-0.5">
-                {navItems.map((item) => {
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id)}
-                      className={`text-left p-3.5 text-xs font-medium transition-all ${
-                        isActive
-                          ? 'text-[#f0f0f0] bg-[rgba(255,62,0,0.06)] border-l-2 border-[#ff3e00]'
-                          : 'text-[rgba(240,240,240,0.5)] hover:text-white border-l-2 border-transparent'
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </nav>
+              <button
+                onClick={() => setIsMobileDrawerOpen(false)}
+                className="px-3 py-1 bg-[#ff3e00] text-black font-space text-xs font-bold rounded"
+              >
+                ✕ CLOSE
+              </button>
             </div>
 
-            {/* Global FX Transition Engine Card */}
-            <div className="p-5 px-6 border-b border-[rgba(240,240,240,0.12)] space-y-3">
-              <div>
-                <span className="font-space text-[10px] uppercase tracking-[0.15em] text-[#ff3e00] block mb-1">
-                  Transition Engine
+            <div className="p-5 px-6 border-b border-[rgba(240,240,240,0.12)]">
+              <span className="font-space text-[10px] uppercase tracking-[0.15em] text-[#ff3e00] block mb-1">
+                Module.01
+              </span>
+              <div className="font-syne font-extrabold text-xl tracking-tight text-[#f0f0f0]">
+                PULSE CRAFT
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto flex flex-col">
+              {/* Vertical Navigation Section */}
+              <div className="p-5 px-6 border-b border-[rgba(240,240,240,0.12)]">
+                <span className="font-space text-[10px] uppercase tracking-[0.15em] text-[#ff3e00] block mb-3">
+                  Navigation
                 </span>
-                <h2 className="font-syne text-base font-bold text-[#f0f0f0] tracking-tight">
-                  Global FX
-                </h2>
-                <p className="text-xs text-[rgba(240,240,240,0.5)] leading-relaxed mt-1">
-                  Select a dashing audio-reactive template inspired by legendary music channels.
-                </p>
+                <nav className="flex flex-col gap-0.5">
+                  {navItems.map((item) => {
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveTab(item.id)}
+                        className={`text-left p-3.5 text-xs font-medium transition-all ${
+                          isActive
+                            ? 'text-[#f0f0f0] bg-[rgba(255,62,0,0.06)] border-l-2 border-[#ff3e00]'
+                            : 'text-[rgba(240,240,240,0.5)] hover:text-white border-l-2 border-transparent'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </nav>
               </div>
 
-              <div className="flex flex-col gap-3">
-                <select
-                  value={config.transitions?.effect || 'blur_dissolve'}
-                  onChange={(e) =>
-                    setConfig((p) => ({
-                      ...p,
-                      transitions: {
-                        ...(p.transitions || { enabled: true, duration: 0.6 }),
-                        effect: e.target.value as any
-                      }
-                    }))
-                  }
-                  className="w-full bg-[#141517] border border-[rgba(240,240,240,0.12)] text-[#f0f0f0] p-2 font-space text-xs focus:outline-none focus:border-[#ff3e00]"
-                >
-                  <option value="blur_dissolve">Blur Dissolve</option>
-                  <option value="crossfade">Smooth Crossfade</option>
-                  <option value="wipe_left">Wipe Left</option>
-                  <option value="wipe_right">Wipe Right</option>
-                  <option value="radial_iris">Radial Iris</option>
-                  <option value="glitch_cut">Glitch Cut</option>
-                  <option value="none">Direct Cut (None)</option>
-                </select>
-
+              {/* Global FX Transition Engine Card */}
+              <div className="p-5 px-6 border-b border-[rgba(240,240,240,0.12)] space-y-3">
                 <div>
-                  <div className="flex justify-between font-space text-[10px] text-[rgba(240,240,240,0.5)] mb-1">
-                    <span>Duration:</span>
-                    <span className="text-[#ff3e00] font-bold">
-                      {(config.transitions?.duration || 0.6).toFixed(2)}s
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0.1}
-                    max={2.0}
-                    step={0.05}
-                    value={config.transitions?.duration || 0.6}
+                  <span className="font-space text-[10px] uppercase tracking-[0.15em] text-[#ff3e00] block mb-1">
+                    Transition Engine
+                  </span>
+                  <h2 className="font-syne text-base font-bold text-[#f0f0f0] tracking-tight">
+                    Global FX
+                  </h2>
+                  <p className="text-xs text-[rgba(240,240,240,0.5)] leading-relaxed mt-1">
+                    Select a dashing audio-reactive template inspired by legendary music channels.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <select
+                    value={config.transitions?.effect || 'blur_dissolve'}
                     onChange={(e) =>
                       setConfig((p) => ({
                         ...p,
                         transitions: {
-                          ...(p.transitions || { enabled: true, effect: 'blur_dissolve' }),
-                          duration: parseFloat(e.target.value)
+                          ...(p.transitions || { enabled: true, duration: 0.6 }),
+                          effect: e.target.value as any
                         }
                       }))
                     }
-                    className="w-full accent-[#ff3e00] h-1.5 bg-[#141517] rounded cursor-pointer"
-                  />
+                    className="w-full bg-[#141517] border border-[rgba(240,240,240,0.12)] text-[#f0f0f0] p-2 font-space text-xs focus:outline-none focus:border-[#ff3e00]"
+                  >
+                    <option value="blur_dissolve">Blur Dissolve</option>
+                    <option value="crossfade">Smooth Crossfade</option>
+                    <option value="wipe_left">Wipe Left</option>
+                    <option value="wipe_right">Wipe Right</option>
+                    <option value="radial_iris">Radial Iris</option>
+                    <option value="glitch_cut">Glitch Cut</option>
+                    <option value="none">Direct Cut (None)</option>
+                  </select>
+
+                  <div>
+                    <div className="flex justify-between font-space text-[10px] text-[rgba(240,240,240,0.5)] mb-1">
+                      <span>Duration:</span>
+                      <span className="text-[#ff3e00] font-bold">
+                        {(config.transitions?.duration || 0.6).toFixed(2)}s
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0.1}
+                      max={2.0}
+                      step={0.05}
+                      value={config.transitions?.duration || 0.6}
+                      onChange={(e) =>
+                        setConfig((p) => ({
+                          ...p,
+                          transitions: {
+                            ...(p.transitions || { enabled: true, effect: 'blur_dissolve' }),
+                            duration: parseFloat(e.target.value)
+                          }
+                        }))
+                      }
+                      className="w-full accent-[#ff3e00] h-1.5 bg-[#141517] rounded cursor-pointer"
+                    />
+                  </div>
                 </div>
               </div>
+
+              {/* Active Tab Detailed Inspector Panel */}
+              <div className="flex-1 p-5 px-6">
+                {activeTab === 'templates' && (
+                  <TemplatePicker
+                    config={config}
+                    onSelectTemplate={handleSelectTemplate}
+                    onUpdateConfig={setConfig}
+                    onTestTransition={handleTriggerTransition}
+                  />
+                )}
+
+                {activeTab === 'visuals' && (
+                  <VisualizerControls
+                    config={config}
+                    onUpdateConfig={setConfig}
+                    onUploadLogo={handleUploadLogo}
+                    onClearLogo={handleClearLogo}
+                    onUploadBackground={handleUploadBackground}
+                    hasCustomLogo={!!logoImage}
+                    hasCustomBg={!!bgMedia}
+                  />
+                )}
+
+                {activeTab === 'sync' && (
+                  <BeatSyncPanel
+                    config={config}
+                    onUpdateConfig={setConfig}
+                    beatState={beatState}
+                    playbackTime={playbackTime}
+                    duration={duration}
+                    onSeek={handleSeek}
+                  />
+                )}
+
+                {activeTab === 'overlays' && (
+                  <OverlayControls
+                    config={config}
+                    onUpdateConfig={setConfig}
+                    playbackTime={playbackTime}
+                    duration={duration}
+                  />
+                )}
+
+                {activeTab === 'audio' && (
+                  <TrackSelector
+                    config={config}
+                    onSelectPreset={handleSelectPresetTrack}
+                    onUploadAudio={handleUploadAudio}
+                    currentTrackId={currentTrackId}
+                  />
+                )}
+              </div>
+
+              {/* Bottom Engine Build Tag */}
+              <div className="p-4 px-6 mt-auto border-t border-[rgba(240,240,240,0.08)]">
+                <span className="font-space text-[10px] text-[rgba(240,240,240,0.3)] tracking-wider">
+                  Engine Build: v2.4.0
+                </span>
+              </div>
             </div>
-
-            {/* Active Tab Detailed Inspector Panel */}
-            <div className="flex-1 p-5 px-6">
-              {activeTab === 'templates' && (
-                <TemplatePicker
-                  config={config}
-                  onSelectTemplate={handleSelectTemplate}
-                  onUpdateConfig={setConfig}
-                  onTestTransition={handleTriggerTransition}
-                />
-              )}
-
-              {activeTab === 'visuals' && (
-                <VisualizerControls
-                  config={config}
-                  onUpdateConfig={setConfig}
-                  onUploadLogo={handleUploadLogo}
-                  onClearLogo={handleClearLogo}
-                  onUploadBackground={handleUploadBackground}
-                  hasCustomLogo={!!logoImage}
-                  hasCustomBg={!!bgMedia}
-                />
-              )}
-
-              {activeTab === 'sync' && (
-                <BeatSyncPanel
-                  config={config}
-                  onUpdateConfig={setConfig}
-                  beatState={beatState}
-                  playbackTime={playbackTime}
-                  duration={duration}
-                  onSeek={handleSeek}
-                />
-              )}
-
-              {activeTab === 'overlays' && (
-                <OverlayControls
-                  config={config}
-                  onUpdateConfig={setConfig}
-                  playbackTime={playbackTime}
-                  duration={duration}
-                />
-              )}
-
-              {activeTab === 'audio' && (
-                <TrackSelector
-                  config={config}
-                  onSelectPreset={handleSelectPresetTrack}
-                  onUploadAudio={handleUploadAudio}
-                  currentTrackId={currentTrackId}
-                />
-              )}
-            </div>
-
-            {/* Bottom Engine Build Tag */}
-            <div className="p-4 px-6 mt-auto border-t border-[rgba(240,240,240,0.08)]">
-              <span className="font-space text-[10px] text-[rgba(240,240,240,0.3)] tracking-wider">
-                Engine Build: v2.4.0
-              </span>
-            </div>
-          </div>
-        </aside>
+          </aside>
         )}
 
         {/* 3. Main Viewport: Studio or Long-Form Audio Clipper */}
@@ -809,14 +920,16 @@ export default function App() {
               onCaptureSnapshot={handleCaptureSnapshot}
               onOpenRepoMeta={() => setIsRepoMetaOpen(true)}
               aspectRatio={config.aspectRatio}
-              resolution={config.preview?.resolution || '720p'}
+              resolution={config.preview?.resolution || '480p'}
               isPlaying={isPlaying}
               currentView={currentView}
               onSwitchView={setCurrentView}
+              onToggleMobileDrawer={() => setIsMobileDrawerOpen((prev) => !prev)}
+              isMobileDrawerOpen={isMobileDrawerOpen}
             />
 
             {/* Viewport Canvas Stage Container */}
-            <div className="viewport-container flex-1 m-5 lg:m-7 border border-[rgba(240,240,240,0.12)] bg-black flex flex-col shadow-2xl overflow-hidden min-h-0">
+            <div className="viewport-container flex-1 m-2 sm:m-4 lg:m-7 border border-[rgba(240,240,240,0.12)] bg-black flex flex-col shadow-2xl overflow-hidden min-h-0">
               <CanvasStage
                 config={config}
                 onUpdateConfig={setConfig}
@@ -838,31 +951,31 @@ export default function App() {
             </div>
 
             {/* 4. Bottom Control & Track Transport Panel (.bottom-panel) */}
-            <div className="bottom-panel bg-[#141517] border-t border-[rgba(240,240,240,0.12)] p-5 px-8 grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-8 shrink-0 z-20">
+            <div className="bottom-panel bg-[#141517] border-t border-[rgba(240,240,240,0.12)] p-3 sm:p-5 px-3 sm:px-8 grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-4 lg:gap-8 shrink-0 z-20">
               {/* Track Info & Scrubber */}
-              <div className="track-info flex items-center gap-5">
+              <div className="track-info flex items-center gap-3 sm:gap-5">
                 <button
                   onClick={handleTogglePlay}
-                  className="play-head w-12 h-12 rounded-sm bg-[#ff3e00] hover:bg-[#ff5722] text-black font-extrabold flex items-center justify-center shrink-0 shadow-lg shadow-[#ff3e00]/25 active:scale-95 transition-all"
+                  className="play-head w-10 sm:w-12 h-10 sm:h-12 rounded-sm bg-[#ff3e00] hover:bg-[#ff5722] text-black font-extrabold flex items-center justify-center shrink-0 shadow-lg shadow-[#ff3e00]/25 active:scale-95 transition-all"
                   title={isPlaying ? 'Pause' : 'Play'}
                 >
                   {isPlaying ? (
-                    <span className="text-sm font-black tracking-tighter">❚❚</span>
+                    <span className="text-xs sm:text-sm font-black tracking-tighter">❚❚</span>
                   ) : (
-                    <span className="text-base font-black ml-0.5">▶</span>
+                    <span className="text-sm sm:text-base font-black ml-0.5">▶</span>
                   )}
                 </button>
 
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-base text-[#f0f0f0] tracking-tight truncate">
-                    {config.audio.trackTitle || 'My Feet Are on the Ground'}
+                  <div className="font-bold text-sm sm:text-base text-[#f0f0f0] tracking-tight truncate">
+                    {config.audio.trackTitle || 'Dialekt Radio 351 (All What You Need)'}
                   </div>
-                  <div className="font-space text-xs text-[rgba(240,240,240,0.5)] uppercase tracking-wider truncate">
-                    BY {config.audio.artistName || 'ITS2KASOOO'}
+                  <div className="font-space text-[10px] sm:text-xs text-[rgba(240,240,240,0.5)] uppercase tracking-wider truncate">
+                    BY {config.audio.artistName || 'Sultan + Shepard / Dialekt'}
                   </div>
 
-                  <div className="timeline-container mt-2 flex items-center gap-3">
-                    <span className="font-space text-[10px] text-[rgba(240,240,240,0.5)] tabular-nums">
+                  <div className="timeline-container mt-1.5 sm:mt-2 flex items-center gap-2 sm:gap-3">
+                    <span className="font-space text-[9px] sm:text-[10px] text-[rgba(240,240,240,0.5)] tabular-nums">
                       {formatTime(playbackTime)}
                     </span>
                     <div className="timeline-track relative flex-1 h-1 bg-[rgba(240,240,240,0.15)] group cursor-pointer flex items-center">
@@ -884,7 +997,7 @@ export default function App() {
                         <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white scale-0 group-hover:scale-100 transition-transform shadow" />
                       </div>
                     </div>
-                    <span className="font-space text-[10px] text-[rgba(240,240,240,0.5)] tabular-nums">
+                    <span className="font-space text-[9px] sm:text-[10px] text-[rgba(240,240,240,0.5)] tabular-nums">
                       {formatTime(duration)}
                     </span>
                   </div>
@@ -892,14 +1005,14 @@ export default function App() {
               </div>
 
               {/* Template Selector Grid */}
-              <div className="template-grid grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="template-grid flex overflow-x-auto sm:grid sm:grid-cols-4 gap-2 pb-1 sm:pb-0 scrollbar-thin">
                 {featuredTemplates.map((t) => {
                   const isActive = config.template === t.id;
                   return (
                     <div
                       key={t.id}
                       onClick={() => handleSelectTemplate(t.id)}
-                      className={`template-card relative p-3 bg-[#0b0c0d] border cursor-pointer transition-all ${
+                      className={`template-card min-w-[130px] sm:min-w-0 shrink-0 sm:shrink relative p-2.5 sm:p-3 bg-[#0b0c0d] border cursor-pointer transition-all ${
                         isActive
                           ? 'border-[#ff3e00] shadow-sm active'
                           : 'border-[rgba(240,240,240,0.12)] hover:border-[rgba(240,240,240,0.3)]'
@@ -910,7 +1023,7 @@ export default function App() {
                           CURR
                         </div>
                       )}
-                      <h3 className="font-bold text-xs text-[#f0f0f0] mb-1 truncate pr-6">
+                      <h3 className="font-bold text-xs text-[#f0f0f0] mb-0.5 sm:mb-1 truncate pr-6">
                         {t.name}
                       </h3>
                       <p className="text-[10px] text-[rgba(240,240,240,0.5)] line-clamp-2 leading-snug">
@@ -967,6 +1080,71 @@ export default function App() {
           </main>
         )}
       </div>
+
+      {/* Mobile Bottom Tab Bar (visible on screens < lg) */}
+      <nav className="lg:hidden bg-[#141517] border-t border-[rgba(240,240,240,0.15)] flex items-center justify-around py-1.5 px-1 shrink-0 z-30 select-none">
+        <button
+          onClick={() => {
+            setCurrentView('studio');
+            setIsMobileDrawerOpen(false);
+          }}
+          className={`flex flex-col items-center gap-0.5 text-[9px] font-space font-bold px-2 py-1 transition-colors ${
+            currentView === 'studio' && !isMobileDrawerOpen ? 'text-[#ff3e00]' : 'text-white/60'
+          }`}
+        >
+          <span className="text-sm">◈</span>
+          <span>STAGE</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setCurrentView('studio');
+            setActiveTab('templates');
+            setIsMobileDrawerOpen(true);
+          }}
+          className={`flex flex-col items-center gap-0.5 text-[9px] font-space font-bold px-2 py-1 transition-colors ${
+            currentView === 'studio' && isMobileDrawerOpen && activeTab === 'templates' ? 'text-[#ff3e00]' : 'text-white/60'
+          }`}
+        >
+          <span className="text-sm">▦</span>
+          <span>TEMPLATES</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setCurrentView('studio');
+            setActiveTab('visuals');
+            setIsMobileDrawerOpen(true);
+          }}
+          className={`flex flex-col items-center gap-0.5 text-[9px] font-space font-bold px-2 py-1 transition-colors ${
+            currentView === 'studio' && isMobileDrawerOpen && (activeTab === 'visuals' || activeTab === 'sync') ? 'text-[#ff3e00]' : 'text-white/60'
+          }`}
+        >
+          <span className="text-sm">⚡</span>
+          <span>FX / SYNC</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setCurrentView('clipper');
+            setIsMobileDrawerOpen(false);
+          }}
+          className={`flex flex-col items-center gap-0.5 text-[9px] font-space font-bold px-2 py-1 transition-colors ${
+            currentView === 'clipper' ? 'text-[#ff3e00]' : 'text-white/60'
+          }`}
+        >
+          <span className="text-sm">✄</span>
+          <span>60M+ CLIP</span>
+        </button>
+
+        <button
+          onClick={() => setIsExportModalOpen(true)}
+          className="flex flex-col items-center gap-0.5 text-[9px] font-space font-bold px-3 py-1 bg-[#ff3e00] text-black rounded active:scale-95 transition-all"
+        >
+          <span className="text-sm">⬇</span>
+          <span>EXPORT</span>
+        </button>
+      </nav>
 
       {/* High-Quality Video Export Dialog */}
       <ExportModal
